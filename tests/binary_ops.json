@@ -1,0 +1,107 @@
+[
+  {
+    "input": "a || b",
+    "output": {"operator": "||", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator ||"
+  },
+  {
+    "input": "a && b",
+    "output": {"operator": "&&", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator &&"
+  },
+  {
+    "input": "a | b",
+    "output": {"operator": "|", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator |"
+  },
+  {
+    "input": "a ^ b",
+    "output": {"operator": "^", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator ^"
+  },
+  {
+    "input": "a & b",
+    "output": {"operator": "&", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator &"
+  },
+  {
+    "input": "a == b",
+    "output": {"operator": "==", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator =="
+  },
+  {
+    "input": "a != b",
+    "output": {"operator": "!=", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator !="
+  },
+  {
+    "input": "a === b",
+    "output": {"operator": "===", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator ==="
+  },
+  {
+    "input": "a !== b",
+    "output": {"operator": "!==", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator !=="
+  },
+  {
+    "input": "a < b",
+    "output": {"operator": "<", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator <"
+  },
+  {
+    "input": "a > b",
+    "output": {"operator": ">", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator >"
+  },
+  {
+    "input": "a <= b",
+    "output": {"operator": "<=", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator <="
+  },
+  {
+    "input": "a >= b",
+    "output": {"operator": ">=", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator >="
+  },
+  {
+    "input": "a << b",
+    "output": {"operator": "<<", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator <<"
+  },
+  {
+    "input": "a >> b",
+    "output": {"operator": ">>", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator >>"
+  },
+  {
+    "input": "a >>> b",
+    "output": {"operator": ">>>", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator >>>"
+  },
+  {
+    "input": "a + b",
+    "output": {"operator": "+", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator +"
+  },
+  {
+    "input": "a - b",
+    "output": {"operator": "-", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator -"
+  },
+  {
+    "input": "a * b",
+    "output": {"operator": "*", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator *"
+  },
+  {
+    "input": "a / b",
+    "output": {"operator": "/", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator /"
+  },
+  {
+    "input": "a % b",
+    "output": {"operator": "%", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "Binary operator %"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "name": "pre-js-py",
+  "version": "1.1.0",
+  "description": "Highly configurable precedence-based parser written in both Python and JavaScript",
+  "main": "PreJsPy.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tkw1536/PreJsPy.git"
+  },
+  "keywords": [
+    "parser",
+    "precendence"
+  ],
+  "author": "Tom Wiesing <tkw01536@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tkw1536/PreJsPy/issues"
+  },
+  "homepage": "https://github.com/tkw1536/PreJsPy"
+}

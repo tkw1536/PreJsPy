@@ -1,0 +1,33 @@
+[
+  {
+    "input": "\"\"",
+    "output": {"raw": "\"\"", "value": "", "type": "Literal"},
+    "message": "empty double quotes literal"
+  },
+  {
+    "input": "\"Hello world\"",
+    "output": {"raw": "\"Hello world\"", "value": "Hello world", "type": "Literal"},
+    "message": "non-empty double quotes literal"
+  },
+  {
+    "input": "\"\\n\\t\\r\\\"\\'\"",
+    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "\"\n\t\r\"'\""},
+    "message": "escaped double quotes literal"
+  },
+
+  {
+    "input": "''",
+    "output": {"value": "", "type": "Literal", "raw": "''"},
+    "message": "empty single quotes literal"
+  },
+  {
+    "input": "'Hello world'",
+    "output": {"value": "Hello world", "type": "Literal", "raw": "'Hello world'"},
+    "message": "non-empty single quotes literal"
+  },
+  {
+    "input": "'\\n\\t\\r\\\"\\''",
+    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "'\n\t\r\"''"},
+    "message": "escaped single quotes literal"
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "input": "-0",
+    "output": {"operator": "-", "argument": {"raw": "0", "type": "Literal", "value": 0.0}, "type": "UnaryExpression"},
+    "message": "unary minus"
+  },
+  {
+    "input": "! true",
+    "output": {"operator": "!", "argument": {"raw": "true", "type": "Literal", "value": true}, "type": "UnaryExpression"},
+    "message": "unary not"
+  },
+  {
+    "input": "~true",
+    "output": {"operator": "~", "argument": {"raw": "true", "type": "Literal", "value": true}, "type": "UnaryExpression"},
+    "message": "unary tilde"
+  },
+  {
+    "input": "+0",
+    "output": {"operator": "+", "argument": {"raw": "0", "type": "Literal", "value": 0.0}, "type": "UnaryExpression"},
+    "message": "unary plus"
+  }
+]

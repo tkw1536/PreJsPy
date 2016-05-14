@@ -1,14 +1,15 @@
 """
-(c) Tom Wiesing 2016, licensed under MIT license
-This code is heavily based on the JavaScript version JSEP
-The original code is (c) 2013 Stephen Oney, http://jsep.from.so/ and licensed under MIT
+    (c) Tom Wiesing 2016, licensed under MIT license
+    This code is heavily based on the JavaScript version JSEP
+    The original code is (c) 2013 Stephen Oney, http://jsep.from.so/ and
+    licensed under MIT
 """
+
+
 class PreJsPy(object):
-    """
-    Represents a single instance of a PreJSPyParser
-    """
-    
-    # CONSTANTS -- these should not be fixed
+    """ Represents a single instance of the PreJSPy Parser. """
+
+    # A list of node types that can be returned.
     COMPOUND = 'Compound'
     IDENTIFIER = 'Identifier'
     MEMBER_EXP = 'MemberExpression'
@@ -17,181 +18,303 @@ class PreJsPy(object):
     CALL_EXP = 'CallExpression'
     UNARY_EXP = 'UnaryExpression'
     BINARY_EXP = 'BinaryExpression'
-    LOGICAL_EXP = 'LogicalExpression'
     CONDITIONAL_EXP = 'ConditionalExpression'
     ARRAY_EXP = 'ArrayExpression'
 
-    PERIOD_CODE = 46 # '.'
-    COMMA_CODE  = 44 # ','
-    SQUOTE_CODE = 39 # single quote
-    DQUOTE_CODE = 34 # double quotes
-    OPAREN_CODE = 40 # (
-    CPAREN_CODE = 41 # )
-    OBRACK_CODE = 91 # [
-    CBRACK_CODE = 93 # ]
-    QUMARK_CODE = 63 # ?
-    SEMCOL_CODE = 59 # ;
-    COLON_CODE  = 58 # :
+    # List of char codes.
+    PERIOD_CODE = 46  # '.'
+    COMMA_CODE = 44  # ','
+    SQUOTE_CODE = 39  # single quote
+    DQUOTE_CODE = 34  # double quotes
+    OPAREN_CODE = 40  # (
+    CPAREN_CODE = 41  # )
+    OBRACK_CODE = 91  # [
+    CBRACK_CODE = 93  # ]
+    QUMARK_CODE = 63  # ?
+    SEMCOL_CODE = 59  # ;
+    COLON_CODE = 58  # :
 
+    # =======================
+    # STATIC HELPER FUNCTIONS
+    # =======================
     @staticmethod
     def __throw_error(msg, index):
-        """Private function used to throw an error message"""
+        """ Throws a parser error with a given message and a given index.
+
+        :param msg: Message of error to throw.
+        :type msg: str
+
+        :param index: Character index at which the error should be thrown.
+        :type index: int
+
+        """
         msg = '%s at character %d' % (msg, index)
-        raise Error(msg)
-    
-    def __init__(self):
-        """
-        Creates a new PreJSPyParser instance. 
-        """
-        
-        # Literals
-        # ----------
-        # Store the values to return for the various literals we may encounter
-        
-        # constants
-        self.constants = {
-            'true': True,
-            'false': False,
-            'null': None
-        }
-        
-        # Except for `this`, which is special. This could be changed to something like `'self'` as well
-        self.this = 'this'
-        
-        # OPERATORS
-            
-        # Use a quickly-accessible map to store all of the unary operators
-        # Values are set to `true` (it really doesn't matter)
-        self.unary_ops = ['-', '!', '~', '+']
+        raise Exception(msg)
 
-        # Also use a map for the binary operations but set their values to their
-        # binary precedence for quick reference:
-        # see [Order of operations](http://en.wikipedia.org/wiki/Order_of_operations#Programming_language)
-        self.binary_ops = {
-            '||': 1, '&&': 2, '|': 3,  '^': 4,  '&': 5,
-            '==': 6, '!=': 6, '===': 6, '!==': 6,
-            '<': 7,  '>': 7,  '<=': 7,  '>=': 7,
-            '<<':8,  '>>': 8, '>>>': 8,
-            '+': 9, '-': 9,
-            '*': 10, '/': 10, '%': 10
-        }
-    
-    # PROPERTY SETTERS / GETTERS
-    
-    @property
-    def unary_ops(self):
-        return self.__unary_ops
-    
-    @unary_ops.setter
-    def unary_ops(self, ary):
-        self.__unary_ops = ary
-        self.__max_uops_len = max(map(len, ary))
-        return ary
-    
-    @property
-    def max_unop_len(self):
-        return self.__max_uops_len
-    
-    @property
-    def binary_ops(self):
-        return self.__binary_ops
-    
-    @binary_ops.setter
-    def binary_ops(self, d):
-        self.__binary_ops = d
-        self.__max_binop_len = max(map(len, d.keys()))
-        return d
-    
-    @property
-    def max_binop_len(self):
-        return self.__max_binop_len
-    
-    @property
-    def constants(self):
-        return self.__constants
-    
-    @constants.setter
-    def constants(self, d):
-        self.__constants = d
-        return d
-    
-    @property
-    def this(self):
-        return self.__this
-    
-    @this.setter
-    def this(self, s):
-        self.__this = s
-        return s
-    
-    #
-    # HELPERS
-    #
-    
-    def __binaryPrecedence(self, op_val):
-        """ Returns the precedence of a binary operator or `0` if it isn't a binary operator.  """
-        if op_val in self.binary_ops.keys():
-            return self.binary_ops[op_val]
-        else:
-            return 0
+    @staticmethod
+    def __createBinaryExpression(operator, left, right):
+        """ Utility function that creates a binary expression to be returned.
 
-    
-    def __createBinaryExpression(self, operator, left, right):
+        :param operator: Operator to use for binary expression.
+        :type operator: str
+
+        :param left: Left expression to use for the binary expression.
+        :type left: dict
+
+        :param right: Right expression to use for the binary expression.
+        :type right: dict
+
+        :rtype: dict
         """
-            Utility function (gets called from multiple places)
-            Also note that `a && b` and `a || b` are *logical* expressions, not binary expressions
-        """
-        tp = PreJsPy.LOGICAL_EXP if (operator == '||' or operator == '&&') else PreJsPy.BINARY_EXP;
+
         return {
-            'type': tp,
+            'type': PreJsPy.BINARY_EXP,
             'operator': operator,
             'left': left,
             'right': right
         }
-    
-    def __isDecimalDigit(self, ch):
-        """
-        Checks if a character is a decimal digit
-        """
-        return (ch >= 48 and ch <= 57) # 0...9
 
-    def __isIdentifierStart(self, ch):
-        """ Checks if a character is the start of an identifier """
-        return (ch == 36) or (ch == 95) or (ch >= 65 and ch <= 90) or  (ch >= 97 and ch <= 122)
+    @staticmethod
+    def __getMaxKeyLen(o):
+        """ Gets the longest key length of an object
+
+        :param o: Object to iterate over
+        :type o: dict
+
+        :rtype: int
+        """
+
+        return max(map(len, o.keys()))
+
+    @staticmethod
+    def __getMaxMemLen(ary):
+        """ Gets the maximum length of the member of any members of an array.
+
+        :param ary: Array to iterate over.
+        :type ary: list
+
+        :rtype: int
+        """
+
+        return max(map(len, ary))
+
+    @staticmethod
+    def __isDecimalDigit(ch):
+        """ Checks if a character is a decimal digit.
+
+        :param ch: Code of character to check.
+        :type ch: int
+
+        :rtype: bool
+        """
+
+        return (ch >= 48 and ch <= 57)  # 0...9
+
+    @staticmethod
+    def __isIdentifierStart(ch):
+        """ Checks if a character is the start of an identifier.
+
+        :param ch: Code of character to check.
+        :type ch: int
+
+        :rtype: bool
+        """
+
         # '$', A..Z and a..z
+        return (ch == 36) or (ch == 95) or (ch >= 65 and ch <= 90) or (
+        ch >= 97 and ch <= 122)
 
-    def __isIdentifierPart(self, ch):
-        """ Checks if a character is part of an identifier """
-        return (ch == 36) or (ch == 95) or (ch >= 65 and ch <= 90) or (ch >= 97 and ch <= 122) or (ch >= 48 and ch <= 57)
+    @staticmethod
+    def __isIdentifierPart(ch):
+        """ Checks if a character is part of an identifier.
+
+        :param ch: Code of character to check.
+        :type ch: int
+
+        :rtype: bool
+        """
+
         # `$`,  `_`, A...Z, a...z and 0...9
-    
-    def __call__(self, expr):
-        return self.parse(expr)
-    
+        return (ch == 36) or (ch == 95) or (ch >= 65 and ch <= 90) or (
+        ch >= 97 and ch <= 122) or (ch >= 48 and ch <= 57)
+
+    #
+    # SETTERS && GETTERS
+    #
+
+    def getConstants(self):
+        """ Gets the constants to be used by this parser.
+
+        :rtype: dict
+        """
+        return self.__constants
+
+    def setConstants(self, d):
+        """ Sets the constants to be used by this parser.
+
+        :param d: Constants to set.
+        :type d: dict
+        """
+
+        self.__constants = d
+
+    def getUnaryOperators(self):
+        """ Gets the unary operators known to this parser.
+
+        :rtype: list
+        """
+
+        return self.__unary_ops
+
+    def getMaxUnaryOperatorsLength(self):
+        """ Gets the length of the maximal unary operator.
+
+        :rtype: int
+        """
+
+        return self.__max_uops_len
+
+    def setUnaryOperators(self, ary):
+        """ Sets the unary operators known to this parser.
+
+        :param ary: List of unary operators to set.
+        :type ary: list
+        """
+
+        self.__unary_ops = ary
+        self.__max_uops_len = PreJsPy.__getMaxMemLen(ary)
+
+    def getBinaryOperators(self):
+        """ Gets the binary operators known to this parser.
+
+        :rtype: dict
+        """
+
+        return self.__binary_ops
+
+    def getMaxBinaryOperatorsLength(self):
+        """ Gets the length of the maximal binary operator.
+
+        :rtype: int
+        """
+
+        return self.__max_binop_len
+
+    def setBinaryOperators(self, d):
+        """ Sets the  binary operators known to this parser.
+
+        :param d: Dictionary of binary operators to set.
+        :type d: dict
+        """
+
+        self.__binary_ops = d
+        self.__max_binop_len = PreJsPy.__getMaxKeyLen(d)
+
+    def getTertiaryOperatorEnabled(self):
+        """ Gets a boolean indicating if the tertiary operator is enabled or
+        not.
+
+        :rtype: bool
+        """
+
+        return self.__tertiary
+
+    def setTertiaryOperatorEnabled(self, e):
+        """ Enables or disables the tertiary operator.
+
+        :param e: State of the tertiary operator to set.
+        :type e: bool
+        """
+
+        self.__tertiary = e
+
+    # =========
+    # INIT CODE
+    # =========
+
+
+    def __init__(self):
+        """ Creates a new PreJSPyParser instance. """
+
+        # Intitialise a set of literal constants for the parser.
+        self.__constants = None
+        self.setConstants({
+            'true': True,
+            'false': False,
+            'null': None
+        })
+
+        # Set a list of unary operators
+        self.__unary_ops = None
+        self.__max_unop_len = None
+        self.setUnaryOperators(['-', '!', '~', '+'])
+
+        # Set a list of binary operators and their preferences.
+        # See http://en.wikipedia.org/wiki/Order_of_operations#Programming_language
+        self.__binary_ops = None
+        self.__max_binop_len = None
+        self.setBinaryOperators({
+            '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5,
+            '==': 6, '!=': 6, '===': 6, '!==': 6,
+            '<': 7, '>': 7, '<=': 7, '>=': 7,
+            '<<': 8, '>>': 8, '>>>': 8,
+            '+': 9, '-': 9,
+            '*': 10, '/': 10, '%': 10
+        })
+
+        # enable the tertiary operator
+        self.__tertiary = None
+        self.setTertiaryOperatorEnabled(True)
+
+    # ============
+    # MISC HELPERS
+    # ============
+
+    def __binaryPrecedence(self, op_val):
+        """
+        Returns the precedence of a binary operator or `0` if it isn't a binary operator.
+        :param op_val: Value of operator to lookup.
+        :type op_val: str
+
+        :rtype: int
+        """
+
+        if op_val in self.getBinaryOperators().keys():
+            return self.getBinaryOperators()[op_val]
+        else:
+            return 0
+
+    # =======
+    # PARSING
+    # =======
+
     def parse(self, expr):
+        """ Parses an expression expr into a parse tree.
+
+        :param expr: Expression to parse.
+        :type expr: str
+
+        :rtype: dict
         """
-        Parses an expression expr into a parse tree
-        """
-        
+
         # `index` stores the character number we are currently at while `length` is a constant
         # All of the gobbles below will modify `index` as we move along
         state = {'index': 0}
-        
-        
+
         def exprI(i):
             try:
                 return expr[i]
             except IndexError:
                 return None
-        
+
         def exprICode(i):
             try:
                 return ord(expr[i])
             except IndexError:
                 return float("nan")
-        
+
         length = len(expr)
-        
+
         # Push `index` up to the next non-space character
         def gobbleSpaces():
             ch = exprICode(state['index'])
@@ -199,7 +322,6 @@ class PreJsPy(object):
             while (ch == 32 or ch == 9):
                 state['index'] += 1
                 ch = exprICode(state['index'])
-            
 
         # The main parsing function. Much of this code is dedicated to ternary expressions
         def gobbleExpression():
@@ -207,23 +329,28 @@ class PreJsPy(object):
             consequent = None
             alternate = None
             gobbleSpaces()
-            
+
             if exprICode(state['index']) == PreJsPy.QUMARK_CODE:
                 #  Ternary expression: test ? consequent : alternate
                 state['index'] += 1
                 consequent = gobbleExpression()
                 if not consequent:
-                    self.__throw_error('Expected expression', state['index'])
-                
+                    PreJsPy.__throw_error('Expected expression', state['index'])
+
                 gobbleSpaces()
-                
+
                 if exprICode(state['index']) == PreJsPy.COLON_CODE:
                     state['index'] += 1
                     alternate = gobbleExpression()
-                    
+
                     if not alternate:
-                        self.__throw_error('Expected expression', state['index'])
-                    
+                        PreJsPy.__throw_error('Expected expression',
+                                           state['index'])
+
+                    if not self.getTertiaryOperatorEnabled():
+                        PreJsPy.__throw_error('Unexpected tertiary operator',
+                                              state['index'])
+
                     return {
                         'type': PreJsPy.CONDITIONAL_EXP,
                         'test': test,
@@ -231,10 +358,9 @@ class PreJsPy(object):
                         'alternate': alternate
                     }
                 else:
-                    self.__throw_error('Expected :', state['index'])
+                    PreJsPy.__throw_error('Expected :', state['index'])
             else:
                 return test
-
 
         # Search for the operation portion of the string (e.g. `+`, `===`)
         # Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
@@ -242,16 +368,15 @@ class PreJsPy(object):
         # then, return that binary operation
         def gobbleBinaryOp():
             gobbleSpaces()
-            to_check = expr[state['index']:state['index']+self.max_binop_len]
+            to_check = expr[state['index']:state['index'] + self.getMaxBinaryOperatorsLength()]
             tc_len = len(to_check)
             while tc_len > 0:
-                if to_check in self.binary_ops.keys():
+                if to_check in self.getBinaryOperators().keys():
                     state['index'] += tc_len
                     return to_check
                 tc_len -= 1
                 to_check = to_check[:tc_len]
             return False
-
 
         # This function is responsible for gobbling an individual expression,
         # e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
@@ -265,7 +390,7 @@ class PreJsPy(object):
             left = None
             right = None
             i = None
-            
+
             # First, try to get the leftmost thing
             # Then, check to see if there's a binary operator operating on that leftmost thing
             left = gobbleToken()
@@ -277,51 +402,55 @@ class PreJsPy(object):
 
             # Otherwise, we need to start a stack to properly place the binary operations in their
             # precedence structure
-            biop_info = { 'value': biop, 'prec': self.__binaryPrecedence(biop)}
+            biop_info = {'value': biop, 'prec': self.__binaryPrecedence(biop)}
 
             right = gobbleToken()
             if not right:
-                self.__throw_error("Expected expression after " + biop, state['index'])
-            
+                PreJsPy.__throw_error("Expected expression after " + biop,
+                                   state['index'])
+
             # create a stack of operators
             stack = [left, biop_info, right];
 
             # Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
             while True:
                 biop = gobbleBinaryOp()
-                
+
                 if not biop:
                     break
-                
+
                 prec = self.__binaryPrecedence(biop)
-                
+
                 if prec == 0:
                     break
-                
-                biop_info = { 'value': biop, 'prec': prec };
+
+                biop_info = {'value': biop, 'prec': prec};
 
                 # Reduce: make a binary expression from the three topmost entries.
-                while (len(stack) > 2) and prec < stack[len(stack)-2]['prec']:
+                while (len(stack) > 2) and prec < stack[len(stack) - 2][
+                    'prec']:
                     right = stack.pop()
                     biop = stack.pop()['value']
                     left = stack.pop()
-                    node = self.__createBinaryExpression(biop, left, right)
-                    
+                    node = PreJsPy.__createBinaryExpression(biop, left, right)
+
                     stack.append(node)
-                
+
                 node = gobbleToken()
                 if not node:
-                    self.__throw_error("Expected expression after " + biop, state['index'])
-                
+                    PreJsPy.__throw_error("Expected expression after " + biop,
+                                       state['index'])
+
                 stack.append(biop_info)
                 stack.append(node)
-            
+
             i = len(stack) - 1
             node = stack[i]
             while i > 1:
-                node = self.__createBinaryExpression(stack[i - 1]['value'], stack[i - 2], node)
+                node = PreJsPy.__createBinaryExpression(stack[i - 1]['value'],
+                                                     stack[i - 2], node)
                 i -= 2
-            
+
             return node
 
         # An individual part of a binary expression:
@@ -330,7 +459,7 @@ class PreJsPy(object):
             ch = None
             to_check = None
             tc_len = None
-            
+
             gobbleSpaces()
             ch = exprICode(state['index'])
 
@@ -343,24 +472,25 @@ class PreJsPy(object):
             elif ch == PreJsPy.OBRACK_CODE:
                 return gobbleArray()
             else:
-                to_check = expr[state['index']:state['index']+self.max_unop_len]
+                to_check = expr[
+                           state['index']:state['index'] + self.getMaxUnaryOperatorsLength()]
                 tc_len = len(to_check)
                 while tc_len > 0:
-                    if to_check in self.unary_ops:
+                    if to_check in self.getUnaryOperators():
                         state['index'] += tc_len
                         return {
                             'type': PreJsPy.UNARY_EXP,
                             'operator': to_check,
-                            'argument': gobbleToken(),
-                            'prefix': True
+                            'argument': gobbleToken()
                         };
                     tc_len -= 1
                     to_check = to_check[:tc_len]
-                
-                if self.__isIdentifierStart(ch) or ch == PreJsPy.OPAREN_CODE: # open parenthesis
+
+                if PreJsPy.__isIdentifierStart(
+                        ch) or ch == PreJsPy.OPAREN_CODE:  # open parenthesis
                     # `foo`, `bar.baz`
                     return gobbleVariable()
-            
+
             return False
 
         # Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
@@ -369,66 +499,68 @@ class PreJsPy(object):
             number = ''
             ch = None
             chCode = None
-            
+
             while self.__isDecimalDigit(exprICode(state['index'])):
                 number += exprI(state['index'])
                 state['index'] += 1
-            
-            if exprICode(state['index']) == PreJsPy.PERIOD_CODE: # can start with a decimal marker
+
+            if exprICode(state[
+                             'index']) == PreJsPy.PERIOD_CODE:  # can start with a decimal marker
                 number += exprI(state['index'])
                 state['index'] += 1
-                
+
                 while self.__isDecimalDigit(exprICode(state['index'])):
                     number += exprI(state['index'])
                     state['index'] += 1
-            
+
             ch = exprI(state['index'])
-            if ch ==  'e' or ch == 'E': # exponent marker
+            if ch == 'e' or ch == 'E':  # exponent marker
                 number += exprI(state['index'])
                 state['index'] += 1
-                
+
                 ch = exprI(state['index'])
-                if ch == '+' or ch == '-': # exponent sign
+                if ch == '+' or ch == '-':  # exponent sign
                     number += exprI(state['index'])
                     state['index'] += 1
-                while self.__isDecimalDigit(exprICode(state['index'])): #exponent itself
+                while self.__isDecimalDigit(
+                        exprICode(state['index'])):  # exponent itself
                     number += exprI(state['index'])
                     state['index'] += 1
-                
-                if not self.__isDecimalDigit(exprICode(state['index']-1)):
-                    self.__throw_error('Expected exponent (' + number + exprI(state['index']) + ')', state['index'])
-                
-            
-            
+
+                if not self.__isDecimalDigit(exprICode(state['index'] - 1)):
+                    PreJsPy.__throw_error('Expected exponent (' + number + exprI(
+                        state['index']) + ')', state['index'])
+
             chCode = exprICode(state['index'])
             # Check to make sure this isn't a variable name that start with a number (123abc)
-            if self.__isIdentifierStart(chCode):
-                self.__throw_error('Variable names cannot start with a number (' + number + exprI(state['index']) + ')', state['index'])
+            if PreJsPy.__isIdentifierStart(chCode):
+                PreJsPy.__throw_error(
+                    'Variable names cannot start with a number (' + number + exprI(
+                        state['index']) + ')', state['index'])
             elif chCode == PreJsPy.PERIOD_CODE:
-                self.__throw_error('Unexpected period', state['index'])
-            
+                PreJsPy.__throw_error('Unexpected period', state['index'])
+
             return {
                 'type': PreJsPy.LITERAL,
                 'value': float(number),
                 'raw': number
             }
 
-
         # Parses a string literal, staring with single or double quotes with basic support for escape codes
         # e.g. `"hello world"`, `'this is\nJSEP'`
         def gobbleStringLiteral():
             s = ''
-            
+
             quote = exprI(state['index'])
             state['index'] += 1
-            
+
             closed = False
             ch = None
-            
+
             while state['index'] < length:
                 ch = exprI(state['index'])
                 state['index'] += 1
-                
+
                 if ch == quote:
                     closed = True
                     break
@@ -436,7 +568,7 @@ class PreJsPy(object):
                     # Check for all of the common escape codes
                     ch = exprI(state['index'])
                     state['index'] += 1
-                    
+
                     if ch == 'n':
                         s += '\n'
                     elif ch == 'r':
@@ -451,58 +583,61 @@ class PreJsPy(object):
                         s += '\x0B'
                     elif ch == '\\':
                         s += '\\'
+
+                    # default: just add the character literally.
+                    else:
+                        s += ch
                 else:
                     s += ch
 
             if not closed:
-                self.__throw_error('Unclosed quote after "'+s+'"', state['index'])
-            
+                PreJsPy.__throw_error('Unclosed quote after "' + s + '"',
+                                   state['index'])
+
             return {
                 'type': PreJsPy.LITERAL,
                 'value': s,
                 'raw': quote + s + quote
             }
 
-
         # Gobbles only identifiers
         # e.g.: `foo`, `_value`, `$x1`
         # Also, this function checks if that identifier is a literal:
-        # (e.g. `true`, `false`, `null`) or `this`
+        # (e.g. `true`, `false`, `null`)
         def gobbleIdentifier():
             ch = exprICode(state['index'])
             start = state['index']
             identifier = None
-            
-            if self.__isIdentifierStart(ch):
+
+            if PreJsPy.__isIdentifierStart(ch):
                 state['index'] += 1
             else:
-                self.__throw_error('Unexpected ' + exprI(state['index']), state['index'])
-            
+                PreJsPy.__throw_error('Unexpected ' + exprI(state['index']),
+                                   state['index'])
+
             while state['index'] < length:
                 ch = exprICode(state['index'])
-                
-                if self.__isIdentifierPart(ch):
+
+                if PreJsPy.__isIdentifierPart(ch):
                     state['index'] += 1
                 else:
                     break
-            
+
             identifier = expr[start:state['index']]
-            
-            if identifier in self.constants.keys():
+
+            if identifier in self.getConstants().keys():
                 return {
                     'type': PreJsPy.LITERAL,
-                    'value': self.constants[identifier],
+                    'value': self.getConstants()[identifier],
                     'raw': identifier
                 }
-            elif identifier == self.this:
-                return { 'type': PreJsPy.THIS_EXP }
             else:
                 return {
                     'type': PreJsPy.IDENTIFIER,
                     'name': identifier
                 }
 
-        #  Gobbles a list of arguments within the context of a function call
+        # Gobbles a list of arguments within the context of a function call
         # or array literal. This function also assumes that the opening character
         # `(` or `[` has already been gobbled, and gobbles expressions and commas
         # until the terminator character `)` or `]` is encountered.
@@ -511,27 +646,25 @@ class PreJsPy(object):
             ch_i = None
             args = []
             node = None
-            
+
             while state['index'] < length:
                 gobbleSpaces()
                 ch_i = exprICode(state['index'])
-                
+
                 if ch_i == termination:
                     state['index'] += 1
                     break
-                elif ch_i == PreJsPy.COMMA_CODE: # between expressions
+                elif ch_i == PreJsPy.COMMA_CODE:  # between expressions
                     state['index'] += 1
                 else:
                     node = gobbleExpression()
-                    
-                    if (not node) or node['type'] == PreJsPy.COMPOUND:
-                        self.__throw_error('Expected comma', state['index'])
-                    
-                    args.append(node)
-                
-            
-            return args
 
+                    if (not node) or node['type'] == PreJsPy.COMPOUND:
+                        PreJsPy.__throw_error('Expected comma', state['index'])
+
+                    args.append(node)
+
+            return args
 
         # Gobble a non-literal variable name. This variable name may include properties
         # e.g. `foo`, `bar.baz`, `foo['bar'].baz`
@@ -540,24 +673,25 @@ class PreJsPy(object):
         def gobbleVariable():
             ch_i = None
             node = None
-            
+
             ch_i = exprICode(state['index'])
 
             if ch_i == PreJsPy.OPAREN_CODE:
                 node = gobbleGroup()
             else:
                 node = gobbleIdentifier()
-            
+
             gobbleSpaces()
-            
+
             ch_i = exprICode(state['index'])
-            
-            while (ch_i == PreJsPy.PERIOD_CODE or ch_i == PreJsPy.OBRACK_CODE or ch_i == PreJsPy.OPAREN_CODE):
+
+            while (
+                        ch_i == PreJsPy.PERIOD_CODE or ch_i == PreJsPy.OBRACK_CODE or ch_i == PreJsPy.OPAREN_CODE):
                 state['index'] += 1
-                
+
                 if ch_i == PreJsPy.PERIOD_CODE:
                     gobbleSpaces()
-                    
+
                     node = {
                         'type': PreJsPy.MEMBER_EXP,
                         'computed': False,
@@ -567,18 +701,18 @@ class PreJsPy(object):
                 elif ch_i == PreJsPy.OBRACK_CODE:
                     node = {
                         'type': PreJsPy.MEMBER_EXP,
-                        'computed': true,
+                        'computed': True,
                         'object': node,
                         'property': gobbleExpression()
                     }
-                    
+
                     gobbleSpaces()
-                    
+
                     ch_i = exprICode(state['index'])
-                    
+
                     if ch_i != PreJsPy.CBRACK_CODE:
-                        self.__throw_error('Unclosed [', state['index'])
-                    
+                        PreJsPy.__throw_error('Unclosed [', state['index'])
+
                     state['index'] += 1
                 elif ch_i == PreJsPy.OPAREN_CODE:
                     # A function call is being made; gobble all the arguments
@@ -587,12 +721,11 @@ class PreJsPy(object):
                         'arguments': gobbleArguments(PreJsPy.CPAREN_CODE),
                         'callee': node
                     }
-                
+
                 gobbleSpaces()
                 ch_i = exprICode(state['index'])
-            
-            return node
 
+            return node
 
         # Responsible for parsing a group of things within parentheses `()`
         # This function assumes that it needs to gobble the opening parenthesis
@@ -602,21 +735,21 @@ class PreJsPy(object):
         def gobbleGroup():
             state['index'] += 1
             node = gobbleExpression()
-            
+
             gobbleSpaces()
-            
+
             if exprICode(state['index']) == PreJsPy.CPAREN_CODE:
                 state['index'] += 1
                 return node
             else:
-                self.__throw_error('Unclosed (', state['index'])
+                PreJsPy.__throw_error('Unclosed (', state['index'])
 
         # Responsible for parsing Array literals `[1, 2, 3]`
         # This function assumes that it needs to gobble the opening bracket
         # and then tries to gobble the expressions as arguments.
         def gobbleArray():
             state["index"] += 1
-            
+
             return {
                 'type': PreJsPy.ARRAY_EXP,
                 'elements': gobbleArguments(PreJsPy.CBRACK_CODE)
@@ -628,11 +761,11 @@ class PreJsPy(object):
 
         while state['index'] < length:
             ch_i = exprICode(state['index'])
-            
+
             # Expressions can be separated by semicolons, commas, or just inferred without any
             # separators
             if ch_i == PreJsPy.SEMCOL_CODE or ch_i == PreJsPy.COMMA_CODE:
-                state['index'] += 1 # ignore separators
+                state['index'] += 1  # ignore separators
             else:
                 # Try to gobble each expression individually
                 node = gobbleExpression()
@@ -641,7 +774,9 @@ class PreJsPy(object):
                 # If we weren't able to find a binary expression and are out of room, then
                 # the expression passed in probably has too much
                 elif state['index'] < length:
-                    self.__throw_error('Unexpected "' + exprI(state['index']) + '"', state['index'])
+                    PreJsPy.__throw_error(
+                        'Unexpected "' + exprI(state['index']) + '"',
+                        state['index'])
 
         # If there's only one expression just try returning the expression
         if len(nodes) == 1:

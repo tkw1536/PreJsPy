@@ -1,0 +1,30 @@
+[
+  {
+    "input": "a && b || c",
+    "output": {"left": {"left": {"type": "Identifier", "name": "a"}, "right": {"type": "Identifier", "name": "b"}, "type": "BinaryExpression", "operator": "&&"}, "right": {"type": "Identifier", "name": "c"}, "type": "BinaryExpression", "operator": "||"},
+    "message": "binary only precedence"
+  },
+  {
+    "input": "a && (b || c)",
+    "output": {"left": {"type": "Identifier", "name": "a"}, "right": {"left": {"type": "Identifier", "name": "b"}, "right": {"type": "Identifier", "name": "c"}, "type": "BinaryExpression", "operator": "||"}, "type": "BinaryExpression", "operator": "&&"},
+    "message": "brackets override binary precedence"
+  },
+
+
+  {
+    "input": "!~a",
+    "output": {"type": "UnaryExpression", "operator": "!", "argument": {"type": "UnaryExpression", "operator": "~", "argument": {"type": "Identifier", "name": "a"}}},
+    "message": "unary operators work in order"
+  },
+
+  {
+    "input": "! a && b",
+    "output": {"left": {"type": "UnaryExpression", "operator": "!", "argument": {"type": "Identifier", "name": "a"}}, "right": {"type": "Identifier", "name": "b"}, "type": "BinaryExpression", "operator": "&&"},
+    "message": "unary precedence over binary precedence"
+  },
+  {
+    "input": "!(a && b)",
+    "output": {"type": "UnaryExpression", "operator": "!", "argument": {"left": {"type": "Identifier", "name": "a"}, "right": {"type": "Identifier", "name": "b"}, "type": "BinaryExpression", "operator": "&&"}},
+    "message": "brackets override unary precedence over binary precedence"
+  }
+]

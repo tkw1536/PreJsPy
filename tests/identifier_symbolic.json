@@ -1,0 +1,32 @@
+[
+  {
+    "input": "a",
+    "output": {"name": "a", "type": "Identifier"},
+    "message": "single-character identifier"
+  },
+  {
+    "input": "hello$_world",
+    "output": {"name": "hello$_world", "type": "Identifier"},
+    "message": "multi-character-identifier"
+  },
+  {
+    "input": "hello.world",
+    "output": {"object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression", "computed": false, "property": {"name": "world", "type": "Identifier"}},
+    "message": "property access via dot"
+  },
+  {
+    "input": "hello[\"world\"]",
+    "output": {"property": {"raw": "\"world\"", "value": "world", "type": "Literal"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
+    "message": "property access via square bracket double string"
+  },
+  {
+    "input": "hello['world']",
+    "output": {"property": {"raw": "'world'", "value": "world", "type": "Literal"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
+    "message": "property access via square bracket single string"
+  },
+  {
+    "input": "hello[world]",
+    "output": {"property": {"name": "world", "type": "Identifier"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
+    "message": "property access via square bracket single identifier"
+  }
+]

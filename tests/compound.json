@@ -1,0 +1,13 @@
+[
+  {
+    "input": "a b",
+    "output": {"body": [{"type": "Identifier", "name": "a"}, {"type": "Identifier", "name": "b"}], "type": "Compound"},
+    "message": "two-item compound parse"
+  },
+  {
+    "input": "a b c",
+    "output": {"body": [{"type": "Identifier", "name": "a"}, {"type": "Identifier", "name": "b"}, {"type": "Identifier", "name": "c"}], "type": "Compound"},
+    "message": "three-item compound parse"
+  }
+
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "input": "f(a)",
+    "output": {"type": "CallExpression", "callee": {"type": "Identifier", "name": "f"}, "arguments": [{"type": "Identifier", "name": "a"}]},
+    "message": "Simple call expression with one argument"
+  },
+  {
+    "input": "f(a,b,c)",
+    "output": {"arguments": [{"name": "a", "type": "Identifier"}, {"name": "b", "type": "Identifier"}, {"name": "c", "type": "Identifier"}], "callee": {"name": "f", "type": "Identifier"}, "type": "CallExpression"},
+    "message": "call expression with multiple arguments"
+  },
+  {
+    "input": "f(g(a))",
+    "output": {"type": "CallExpression", "callee": {"type": "Identifier", "name": "f"}, "arguments": [{"type": "CallExpression", "callee": {"type": "Identifier", "name": "g"}, "arguments": [{"type": "Identifier", "name": "a"}]}]},
+    "message": "nested call expression"
+  },
+  {
+    "input": "f(a,f(b),c)",
+    "output": {"arguments": [{"name": "a", "type": "Identifier"}, {"arguments": [{"name": "b", "type": "Identifier"}], "callee": {"name": "f", "type": "Identifier"}, "type": "CallExpression"}, {"name": "c", "type": "Identifier"}], "callee": {"name": "f", "type": "Identifier"}, "type": "CallExpression"},
+    "message": "nested call expression with multiple arguments"
+  }
+]
