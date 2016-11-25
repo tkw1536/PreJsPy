@@ -1,6 +1,6 @@
-===============
+=======
 PreJsPy
-===============
+=======
 
 .. image:: https://travis-ci.org/tkw1536/PreJsPy.svg?branch=master
    :alt: Build Status
@@ -14,12 +14,14 @@ The default grammar is based on a subset of JavaScript but can be adapted to a l
 
 .. code:: python
 
+  >>> from PreJsPy import PreJsPy
   >>> parser = PreJsPy()
   >>> parser.parse("6 * 9 == 42")
   {'type': 'BinaryExpression', 'operator': '==', 'right': {'type': 'Literal', 'raw': '42', 'value': 42.0}, 'left': {'type': 'BinaryExpression', 'operator': '*', 'right': {'type': 'Literal', 'raw': '9', 'value': 9.0}, 'left': {'type': 'Literal', 'raw': '6', 'value': 6.0}}}
 
 .. code:: js
 
+  > var PreJsPy = require('pre-js-py').PreJsPy;
   > parser = new PreJsPy()
   > parser.parse('6 * 9 == 42')
   { type: 'BinaryExpression',
@@ -83,8 +85,8 @@ The API in JavaScript and python are almost identical. The only differences come
   parser.getUnaryOperators() // gets an array of unary operators
   parser.setUnaryOperators(ary) // sets an array of unary operators
 
-  parser.getBinaryOperators() // returns an object mapping binary operators to their precendency
-  parser.setBinaryOperators(ary) // sets the binary operators to precendence mapping
+  parser.getBinaryOperators() // returns an object mapping binary operators to their precedence
+  parser.setBinaryOperators(ary) // sets the binary operators to precedence mapping
 
   parser.parse(s) // parses a string into a AST
 
@@ -98,14 +100,33 @@ The API in JavaScript and python are almost identical. The only differences come
   parser.getUnaryOperators() # gets an array of unary operators
   parser.setUnaryOperators(ary) # sets an array of unary operators
 
-  parser.getBinaryOperators() # returns an object mapping binary operators to their precendency
-  parser.setBinaryOperators(ary) # sets the binary operators to precendence mapping
+  parser.getBinaryOperators() # returns an object mapping binary operators to their precedence
+  parser.setBinaryOperators(ary) # sets the binary operators to precedence mapping
 
   parser.parse(s) # parses a string into a AST
+
+Install
+=======
+
+This package is published on the
+`Python Package Index <https://pypi.python.org/pypi/pre_js_py>`_
+Installation can be done simply via pip:
+
+.. code:: bash
+
+   pip install pre_js_py
+
+It is also published on
+`Nodejs Package Manager <https://www.npmjs.com/package/pre-js-py>`_
+Installation can be done simply via npm:
+
+.. code:: bash
+
+   npm install pre-js-py
 
 
 License + Acknowledgements
 ==========================
 
 This module and associated documentation is Copyright (c) Tom Wiesing 2016
-and licensed under the MIT license, see `license <LICENSE>`_ for details. 
+and licensed under the MIT license, see `license <LICENSE>`_ for details.
