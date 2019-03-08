@@ -120,9 +120,9 @@ class PreJsPy(object):
         :rtype: bool
         """
 
-        # '$', A..Z and a..z
+        # '$', A..Z and a..z and non-ascii
         return (ch == 36) or (ch == 95) or (ch >= 65 and ch <= 90) or (
-        ch >= 97 and ch <= 122)
+        ch >= 97 and ch <= 122) or (ch >= 128)
 
     @staticmethod
     def __isIdentifierPart(ch):
@@ -134,9 +134,9 @@ class PreJsPy(object):
         :rtype: bool
         """
 
-        # `$`,  `_`, A...Z, a...z and 0...9
+        # `$`,  `_`, A...Z, a...z and 0...9 and non-ascii
         return (ch == 36) or (ch == 95) or (ch >= 65 and ch <= 90) or (
-        ch >= 97 and ch <= 122) or (ch >= 48 and ch <= 57)
+        ch >= 97 and ch <= 122) or (ch >= 48 and ch <= 57) or (ch > 128)
 
     #
     # SETTERS && GETTERS

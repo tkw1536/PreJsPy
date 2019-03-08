@@ -5,9 +5,19 @@
     "message": "single-character identifier"
   },
   {
+    "input": "ä",
+    "output": {"name": "ä", "type": "Identifier"},
+    "message": "single-character non-ascii identifier"
+  },
+  {
     "input": "hello$_world",
     "output": {"name": "hello$_world", "type": "Identifier"},
     "message": "multi-character-identifier"
+  },
+  {
+    "input": "wät",
+    "output": {"name": "wät", "type": "Identifier"},
+    "message": "multi-character non-ascii identifier"
   },
   {
     "input": "hello.world",
