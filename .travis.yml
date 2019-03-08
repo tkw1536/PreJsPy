@@ -1,12 +1,54 @@
-language: python
-python:
-  - "2.6"
-  - "2.7"
-  - "3.2"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "3.5-dev"
-  - "nightly"
-node_js: "0.10"
+sudo: false
+
+matrix:
+  include:
+    # Python
+    - language: python
+      python:
+        - "2.6"
+    - language: python
+      python:
+        - "2.7"
+    - language: python
+      python:
+        - "3.2"
+    - language: python
+      python:
+        - "3.3"
+    - language: python
+      python:
+        - "3.4"
+    - language: python
+      python:
+        - "3.5"
+    - language: python
+      python:
+        - "3.6"
+      
+    # Node
+    - language: node_js
+      node_js:
+        - "4"
+    - language: node_js
+      node_js:
+        - "5"
+    - language: node_js
+      node_js:
+        - "6"
+    - language: node_js
+      node_js:
+        - "7"
+    - language: node_js
+      node_js:
+        - "8"
+    - language: node_js
+      node_js:
+        - "9"
+    - language: node_js
+      node_js:
+        - "10"
+    - language: node_js
+      node_js:
+        - "11"
+
 script: bash tests/test.sh
