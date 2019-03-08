@@ -1,5 +1,5 @@
 """
-    (c) Tom Wiesing 2016, licensed under MIT license
+    (c) Tom Wiesing 2016-19, licensed under MIT license
     This code is heavily based on the JavaScript version JSEP
     The original code is (c) 2013 Stephen Oney, http://jsep.from.so/ and
     licensed under MIT
