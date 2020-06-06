@@ -13,7 +13,7 @@ export as namespace PreJsPy;
  */
 export type Expression<L, U extends string, B extends string> = 
     Identifier |
-    Literal<L, U, B> |
+    Literal<L> |
     Compound<L, U, B> |
     Member<L, U, B> | 
     Call<L, U, B> |
@@ -22,10 +22,10 @@ export type Expression<L, U extends string, B extends string> =
     Condition<L, U, B> |
     Ary<L, U, B>;
 
-interface Compound<L, U, B> {
+interface Compound<L, U extends string, B extends string> {
     type: "Compound";
     body: Expression<L, U, B>[];
-};
+}
 
 
 interface Identifier {
@@ -40,7 +40,7 @@ interface Member<L, U extends string, B extends string> {
     name: Expression<L, U, B>,
 }
 
-interface Literal<L, U extends string, B extends string> {
+interface Literal<L> {
     type: "Literal";
     value: L | number;
     raw: true;
