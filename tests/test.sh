@@ -5,13 +5,13 @@ set -e
 # If we are on travis, run only tests for specific languages
 if [ "$TRAVIS" == "true" ]; then
     if [ ! -z "$TRAVIS_NODE_VERSION" ]; then
-        node src/js/test.js
+        pushd src/js/ && npm test && popd
     fi
     if [ ! -z "$TRAVIS_PYTHON_VERSION" ]; then
-        python src/py/test.py
+        pushd src/py/ && python setup.py test && popd
     fi
 # Else we are local and run both tests
 else
-    node src/js/test.js
-    python src/py/test.py
+    pushd src/js/ && npm test && popd
+    pushd src/py/ && python setup.py test && popd
 fi
