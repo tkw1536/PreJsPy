@@ -2,9 +2,9 @@
 PreJsPy
 =======
 
-.. image:: https://travis-ci.org/tkw1536/PreJsPy.svg?branch=master
+.. image:: https://travis-ci.com/tkw1536/PreJsPy.svg?branch=master
    :alt: Build Status
-   :target: https://travis-ci.org/tkw1536/PreJsPy
+   :target: https://travis-ci.com/tkw1536/PreJsPy
 
 What is this?
 =============
