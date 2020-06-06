@@ -3,6 +3,7 @@
   "version": "1.2.0",
   "description": "Highly configurable precedence-based parser written in both Python and JavaScript",
   "main": "PreJsPy.js",
+  "types": "PreJsPy.d.ts",
   "scripts": {
     "test": "node test.js"
   },
