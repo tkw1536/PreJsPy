@@ -1,6 +1,6 @@
 {
   "name": "pre-js-py",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Highly configurable precedence-based parser written in both Python and JavaScript",
   "main": "PreJsPy.js",
   "types": "PreJsPy.d.ts",
