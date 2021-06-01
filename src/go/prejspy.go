@@ -8,7 +8,7 @@ import "encoding/json"
 
 // PreJSPy is a single instance of the PreJSPy Parser.
 type PreJSPy struct {
-	literals map[string]interface{}
+	constants map[string]interface{}
 
 	unaryOps   []string
 	maxUnopLen int
@@ -21,12 +21,12 @@ type PreJSPy struct {
 
 // Gets the constants to be used by this parser.
 func (parser *PreJSPy) GetConstants() map[string]interface{} {
-	return parser.literals
+	return parser.constants
 }
 
 // Sets the constants to be used by this parser.
 func (parser *PreJSPy) SetConstants(constants map[string]interface{}) {
-	parser.literals = constants
+	parser.constants = constants
 }
 
 // Gets the unary operators known to this parser.
@@ -108,501 +108,538 @@ func (parser *PreJSPy) binaryPrecendence(op_val string) int {
 // =======
 
 func (parser *PreJSPy) Parse(expr string) Expression {
-	var index, length int
+	run := &ParsingRun{
+		PreJSPy: parser,
+	}
+	run.Reset(expr)
+	return run.Run()
+}
 
-	var exprI func(int) string
-	var exprICode func(int) int
-	var gobbleExpression, gobbleBinaryExpression, gobbleToken, gobbleNumericLiteral, gobbleStringLiteral, gobbleGroup, gobbleArray, gobbleVariable, gobbleIdentifier func() Expression
-	var gobbleArguments func(termination int) (args []Expression)
+// ParsingRun represents a single run of the parser
+type ParsingRun struct {
+	*PreJSPy
+
+	// expr is the expression to be parsed
+	expr []rune
 
 	// `index` stores the character number we are currently at while `length` is a constant
 	// All of the gobbles below will modify `index` as we move along
-	exprI = func(i int) string {
-		if i >= length {
-			return ""
-		}
-		return string([]rune(expr)[i])
+	index, length int
+}
+
+// Reset resets the data in this ParsingRun
+func (r *ParsingRun) Reset(expr string) {
+	r.expr = []rune(expr)
+	r.index = 0
+	r.length = len(r.expr)
+}
+
+// exprI returns the current character
+func (r ParsingRun) exprI() string {
+	if r.index >= r.length {
+		return ""
 	}
+	return string(r.expr[r.index])
+}
 
-	exprICode = func(i int) int {
-		if i >= length {
-			return 0
-		}
-		return int([]rune(expr)[i])
+// exprICode returns the current character
+func (r ParsingRun) exprICode() int {
+	if r.index >= r.length {
+		return 0
 	}
+	return int(r.expr[r.index])
+}
 
-	length = strlen(expr)
+// TODO: substring!
 
-	// Push `index` up to the next non-space character
-	gobbleSpaces := func() {
-		ch := exprICode(index)
-		for ch == 32 || ch == 9 {
-			index++
-			ch = exprICode(index)
-		}
-	}
-
-	// The main parsing function. Much of this code is dedicated to ternary expressions
-	gobbleExpression = func() Expression {
-		var test = gobbleBinaryExpression()
-		var consequent, alternate Expression
-
-		gobbleSpaces()
-		if exprICode(index) == QUMARK_CODE {
-			// Ternary expression: test ? consequent : alternate
-			index++
-			consequent = gobbleExpression()
-			if consequent == nil {
-				ThrowError("Expected expression", index)
-			}
-			gobbleSpaces()
-			if exprICode(index) == COLON_CODE {
-				index++
-				alternate = gobbleExpression()
-				if alternate == nil {
-					ThrowError("Expected expression", index)
-				}
-				if !parser.GetTertiaryOperatorEnabled() {
-					ThrowError("Unexpected tertiary operator", index)
-				}
-				return ConditionalExpression{
-					Test:       test,
-					Consequent: consequent,
-					Alternate:  alternate,
-				}
-			} else {
-				ThrowError("Expected :", index)
-			}
-		} else {
-			return test
-		}
-		panic("never reached")
-	}
-
-	u_ops := parser.GetUnaryOperators()
-	bin_ops := parser.GetBinaryOperators()
-	constants := parser.GetConstants()
-
-	// Search for the operation portion of the string (e.g. `+`, `===`)
-	// Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
-	// and move down from 3 to 2 to 1 character until a matching binary operation is found
-	// then, return that binary operation
-	gobbleBinaryOp := func() (string, bool) {
-		gobbleSpaces()
-
-		to_check := substring(expr, index, parser.GetMaxBinaryOperatorsLength())
-		tc_len := strlen(to_check)
-
-		for tc_len > 0 {
-			if _, ok := bin_ops[to_check]; ok {
-				index += tc_len
-				return to_check, true
-			}
-
-			tc_len--
-			to_check = substring(to_check, 0, tc_len)
-		}
-		return "", false
-	}
-
-	// This function is responsible for gobbling an individual expression,
-	// e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
-	gobbleBinaryExpression = func() (node Expression) {
-
-		// First, try to get the leftmost thing
-		// Then, check to see if there's a binary operator operating on that leftmost thing
-		left := gobbleToken()
-		biop, biopOK := gobbleBinaryOp()
-
-		// If there wasn't a binary operator, just return the leftmost node
-		if !biopOK {
-			return left
-		}
-
-		// Otherwise, we need to start a stack to properly place the binary operations in their
-		// precedence structure
-		biop_info := binaryOperator{
-			Value: biop, Prec: parser.binaryPrecendence(biop),
-		}
-
-		right := gobbleToken()
-		if right == nil {
-			ThrowError("Expected expression after "+biop, index)
-		}
-
-		stack := []Expression{left, biop_info, right}
-
-		biop, biopOK = gobbleBinaryOp()
-		for biopOK {
-			prec := parser.binaryPrecendence(biop)
-			if prec == 0 {
-				break
-			}
-
-			biop_info = binaryOperator{Value: biop, Prec: prec}
-
-			var op Expression
-			for len(stack) > 2 && (prec <= stack[len(stack)-2].(binaryOperator).Prec) {
-				right, stack = stack[len(stack)-1], stack[:len(stack)-1]
-				op, stack = stack[len(stack)-1], stack[:len(stack)-1]
-				left, stack = stack[len(stack)-1], stack[:len(stack)-1]
-
-				biop = op.(binaryOperator).Value
-
-				stack = append(stack, BinaryExpression{
-					Operator: biop,
-					Left:     left,
-					Right:    right,
-				})
-			}
-
-			node = gobbleToken()
-			if node == nil {
-				ThrowError("Expected expression after "+biop, index)
-			}
-			stack = append(stack, biop_info, node)
-
-			biop, biopOK = gobbleBinaryOp()
-		}
-
-		i := len(stack) - 1
-		node = stack[i]
-		for i > 1 {
-			node = BinaryExpression{
-				Operator: stack[i-1].(binaryOperator).Value,
-				Left:     stack[i-2],
-				Right:    node,
-			}
-			i -= 2
-		}
-		return node
-	}
-
-	gobbleToken = func() Expression {
-		var ch int
-		var to_check string
-		var tc_len int
-
-		gobbleSpaces()
-
-		ch = exprICode(index)
-
-		if isDecimalDigit(ch) || ch == PERIOD_CODE { // Char code 46 is a dot `.` which can start off a numeric literal
-			return gobbleNumericLiteral()
-		} else if ch == SQUOTE_CODE || ch == DQUOTE_CODE { // Single or double quotes
-			return gobbleStringLiteral()
-		} else if ch == OBRACK_CODE {
-			return gobbleArray()
-		} else {
-			to_check = substring(expr, index, parser.GetMaxUnaryOperatorsLength())
-			tc_len = strlen(to_check)
-
-			for tc_len > 0 {
-				if contains(u_ops, to_check) {
-					index += tc_len
-					return UnaryExpression{
-						Operator: to_check,
-						Argument: gobbleToken(),
-					}
-				}
-
-				tc_len--
-				to_check = substring(to_check, 0, tc_len)
-			}
-
-			if isIdentifierStart(ch) || ch == OPAREN_CODE {
-				return gobbleVariable()
-			}
-		}
-
-		return nil
-	}
-
-	gobbleNumericLiteral = func() Expression {
-		var number, ch string
-		var chCode int
-		for isDecimalDigit(exprICode(index)) {
-			number += exprI(index)
-			index++
-		}
-
-		if exprICode(index) == PERIOD_CODE {
-			number += exprI(index)
-			index++
-
-			for isDecimalDigit(exprICode(index)) {
-				number += exprI(index)
-				index++
-			}
-		}
-
-		ch = exprI(index)
-		if ch == "e" || ch == "E" { // exponent marker
-			number += exprI(index)
-			index++
-			ch = exprI(index)
-			if ch == "+" || ch == "-" { // exponent sign
-				number += exprI(index)
-				index++
-			}
-
-			for isDecimalDigit(exprICode(index)) { //exponent itself
-				number += exprI(index)
-				index++
-			}
-
-			if !isDecimalDigit(exprICode(index - 1)) {
-				ThrowError("Expected exponent ("+number+exprI(index)+")", index)
-			}
-
-		}
-
-		chCode = exprICode(index)
-
-		// Check to make sure this isn't a variable name that start with a number (123abc)
-		if isIdentifierStart(chCode) {
-			ThrowError("Variable names cannot start with a number ("+number+exprI(index)+")", index)
-		} else if chCode == PERIOD_CODE {
-			ThrowError("Unexpected period", index)
-		}
-
-		// parse the number
-		var floatNumber float64
-		if err := json.Unmarshal([]byte(number), &floatNumber); err != nil {
-			panic(err)
-		}
-
-		return Literal{
-			Value: floatNumber,
-			Raw:   number,
-		}
-	}
-
-	// Parses a string literal, staring with single or double quotes with basic support for escape codes
-	// e.g. `"hello world"`, `'this is\nJSEP'`
-	gobbleStringLiteral = func() Expression {
-		var str string
-		quote := exprI(index)
-		index++
-		var closed bool
-		var ch string
-
-		for index < length {
-			ch = exprI(index)
-			index++
-			if ch == quote {
-				closed = true
-				break
-			} else if ch == "\\" {
-				ch = exprI(index)
-				index++
-				switch ch {
-				case "n":
-					str += "\n"
-				case "r":
-					str += "\r"
-				case "t":
-					str += "\t"
-				case "b":
-					str += "\b"
-				case "f":
-					str += "\f"
-				case "v":
-					str += "\x0B"
-				case "\\":
-					str += "\\"
-
-				// default: just add the character literally.
-				default:
-					str += ch
-				}
-			} else {
-				str += ch
-			}
-		}
-
-		if !closed {
-			ThrowError("Unclosed quote after \""+str+"\"", index)
-		}
-
-		return Literal{
-			Value: str,
-			Raw:   quote + str + quote,
-		}
-	}
-
-	// Gobbles only identifiers
-	// e.g.: `foo`, `_value`, `$x1`
-	// Also, this function checks if that identifier is a literal:
-	// (e.g. `true`, `false`, `null`) or `this`
-	gobbleIdentifier = func() Expression {
-		ch := exprICode(index)
-		start := index
-
-		if isIdentifierStart(ch) {
-			index++
-		} else {
-			ThrowError("Unexpected "+exprI(index), index)
-		}
-
-		for index < length {
-			ch := exprICode(index)
-			if isIdentifierPart(ch) {
-				index++
-			} else {
-				break
-			}
-		}
-		identifier := substring(expr, start, index-start)
-
-		if c, ok := constants[identifier]; ok {
-			return Literal{
-				Value: c,
-				Raw:   identifier,
-			}
-		} else {
-			return Identifier{
-				Name: identifier,
-			}
-		}
-	}
-
-	// Gobbles a list of arguments within the context of a function call
-	// or array literal. This function also assumes that the opening character
-	// `(` or `[` has already been gobbled, and gobbles expressions and commas
-	// until the terminator character `)` or `]` is encountered.
-	// e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
-	gobbleArguments = func(termination int) (args []Expression) {
-		var ch_i int
-
-		for index < length {
-			gobbleSpaces()
-			ch_i = exprICode(index)
-			if ch_i == termination {
-				index++
-				break
-			} else if ch_i == COMMA_CODE {
-				index++
-			} else {
-				node := gobbleExpression()
-				if node == nil || node.Type() == COMPOUND {
-					ThrowError("Expected comma", index)
-				}
-				args = append(args, node)
-			}
-		}
-
-		if args == nil {
-			args = []Expression{}
-		}
-
-		return args
-	}
-
-	// Gobble a non-literal variable name. This variable name may include properties
-	// e.g. `foo`, `bar.baz`, `foo['bar'].baz`
-	// It also gobbles function calls:
-	// e.g. `Math.acos(obj.angle)`
-	gobbleVariable = func() (node Expression) {
-
-		ch_i := exprICode(index)
-		if ch_i == OPAREN_CODE {
-			node = gobbleGroup()
-		} else {
-			node = gobbleIdentifier()
-		}
-		gobbleSpaces()
-
-		ch_i = exprICode(index)
-		for ch_i == PERIOD_CODE || ch_i == OBRACK_CODE || ch_i == OPAREN_CODE {
-			index++
-
-			if ch_i == PERIOD_CODE {
-				gobbleSpaces()
-				node = MemberExpression{
-					Computed: false,
-					Object:   node,
-					Property: gobbleIdentifier(),
-				}
-			} else if ch_i == OBRACK_CODE {
-				node = MemberExpression{
-					Computed: true,
-					Object:   node,
-					Property: gobbleExpression(),
-				}
-				gobbleSpaces()
-				ch_i = exprICode(index)
-				if ch_i != CBRACK_CODE {
-					ThrowError("Unclosed [", index)
-				}
-				index++
-			} else if ch_i == OPAREN_CODE {
-				// A function call is being made; gobble all the arguments
-				node = CallExpression{
-					Arguments: gobbleArguments(CPAREN_CODE),
-					Callee:    node,
-				}
-			}
-			gobbleSpaces()
-			ch_i = exprICode(index)
-		}
-		return
-	}
-
-	// Responsible for parsing a group of things within parentheses `()`
-	// This function assumes that it needs to gobble the opening parenthesis
-	// and then tries to gobble everything within that parenthesis, assuming
-	// that the next thing it should see is the close parenthesis. If not,
-	// then the expression probably doesn't have a `)`
-	gobbleGroup = func() Expression {
-		index++
-		node := gobbleExpression()
-		gobbleSpaces()
-		if exprICode(index) == CPAREN_CODE {
-			index++
-			return node
-		} else {
-			ThrowError("Unclosed (", index)
-		}
-		return nil
-	}
-
-	// Responsible for parsing Array literals `[1, 2, 3]`
-	// This function assumes that it needs to gobble the opening bracket
-	// and then tries to gobble the expressions as arguments.
-	gobbleArray = func() Expression {
-		index++
-		return ArrayExpression{
-			Elements: gobbleArguments(CBRACK_CODE),
-		}
-	}
+// Run runs this parsing run
+func (r *ParsingRun) Run() Expression {
 
 	var nodes []Expression
 	var ch_i int
 
-	for index < length {
-		ch_i = exprICode(index)
+	for r.index < r.length {
+		ch_i = r.exprICode()
 
 		// Expressions can be separated by semicolons, commas, or just inferred without any
 		// separators
 		if ch_i == SEMCOL_CODE || ch_i == COMMA_CODE {
-			index++ // ignore separators
-		} else {
-			node := gobbleExpression()
-			if node != nil {
-				nodes = append(nodes, node)
-			} else if index < length {
-				ThrowError("Unexpected \""+exprI(index)+"\"", index)
-			}
+			r.index++ // ignore separators
+			continue
+		}
+
+		node := r.gobbleExpression()
+		if node != nil {
+			nodes = append(nodes, node)
+		} else if r.index < r.length {
+			ThrowError("Unexpected \""+r.exprI()+"\"", r.index)
 		}
 	}
 
 	// If there's only one expression just try returning the expression
 	if len(nodes) == 1 {
 		return nodes[0]
-	} else {
-		return Compound{
-			Body: nodes,
+	}
+
+	return Compound{
+		Body: nodes,
+	}
+}
+
+func (r *ParsingRun) gobbleSpaces() {
+	var ch int
+	for {
+		ch = r.exprICode()
+		if !(ch == 32 || ch == 9) {
+			break
 		}
+		r.index++
+	}
+}
+
+// The main parsing function. Much of this code is dedicated to ternary expressions
+func (r *ParsingRun) gobbleExpression() Expression {
+	var test = r.gobbleBinaryExpression()
+	var consequent, alternate Expression
+
+	r.gobbleSpaces()
+
+	if r.exprICode() != QUMARK_CODE {
+		return test
+	}
+	r.index++
+
+	// Ternary expression: test ? consequent : alternate
+	consequent = r.gobbleExpression()
+	if consequent == nil {
+		ThrowError("Expected expression", r.index)
+	}
+
+	r.gobbleSpaces()
+
+	if r.exprICode() != COLON_CODE {
+		ThrowError("Expected :", r.index)
+	}
+	r.index++
+
+	alternate = r.gobbleExpression()
+	if alternate == nil {
+		ThrowError("Expected expression", r.index)
+	}
+	if !r.GetTertiaryOperatorEnabled() {
+		ThrowError("Unexpected tertiary operator", r.index)
+	}
+
+	return ConditionalExpression{
+		Test:       test,
+		Consequent: consequent,
+		Alternate:  alternate,
+	}
+}
+
+// Search for the operation portion of the string (e.g. `+`, `===`)
+// Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
+// and move down from 3 to 2 to 1 character until a matching binary operation is found
+// then, return that binary operation
+func (r *ParsingRun) gobbleBinaryOp() (string, bool) {
+	r.gobbleSpaces()
+
+	to_check := substring(string(r.expr), r.index, r.GetMaxBinaryOperatorsLength())
+	tc_len := strlen(to_check)
+
+	for tc_len > 0 {
+		if _, ok := r.binOps[to_check]; ok {
+			r.index += tc_len
+			return to_check, true
+		}
+
+		tc_len--
+		to_check = substring(to_check, 0, tc_len)
+	}
+
+	return "", false
+}
+
+// This function is responsible for gobbling an individual expression,
+// e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
+func (r *ParsingRun) gobbleBinaryExpression() (node Expression) {
+
+	// First, try to get the leftmost thing
+	// Then, check to see if there's a binary operator operating on that leftmost thing
+	left := r.gobbleToken()
+
+	biop, biopOK := r.gobbleBinaryOp()
+	if !biopOK {
+		return left
+	}
+
+	// Otherwise, we need to start a stack to properly place the binary operations in their
+	// precedence structure
+	biop_info := binaryOperator{
+		Value: biop, Prec: r.binaryPrecendence(biop),
+	}
+
+	right := r.gobbleToken()
+	if right == nil {
+		ThrowError("Expected expression after "+biop, r.index)
+	}
+
+	stack := []Expression{left, biop_info, right}
+
+	for {
+		biop, biopOK := r.gobbleBinaryOp()
+		if !biopOK {
+			break
+		}
+
+		prec := r.binaryPrecendence(biop)
+		if prec == 0 {
+			break
+		}
+
+		biop_info = binaryOperator{Value: biop, Prec: prec}
+
+		var op Expression
+		for len(stack) > 2 && (prec <= stack[len(stack)-2].(binaryOperator).Prec) {
+			right, stack = stack[len(stack)-1], stack[:len(stack)-1]
+			op, stack = stack[len(stack)-1], stack[:len(stack)-1]
+			left, stack = stack[len(stack)-1], stack[:len(stack)-1]
+
+			biop = op.(binaryOperator).Value
+
+			stack = append(stack, BinaryExpression{
+				Operator: biop,
+				Left:     left,
+				Right:    right,
+			})
+		}
+
+		node = r.gobbleToken()
+		if node == nil {
+			ThrowError("Expected expression after "+biop, r.index)
+		}
+		stack = append(stack, biop_info, node)
+	}
+
+	i := len(stack) - 1
+	node = stack[i]
+	for i > 1 {
+		node = BinaryExpression{
+			Operator: stack[i-1].(binaryOperator).Value,
+			Left:     stack[i-2],
+			Right:    node,
+		}
+		i -= 2
+	}
+	return node
+}
+
+func (r *ParsingRun) gobbleToken() Expression {
+	r.gobbleSpaces()
+
+	ch := r.exprICode()
+	switch {
+	// Char code 46 is a dot `.` which can start off a numeric literal
+	case isDecimalDigit(ch) || ch == PERIOD_CODE:
+		return r.gobbleNumericLiteral()
+	// Single or double quotes
+	case ch == SQUOTE_CODE || ch == DQUOTE_CODE:
+		return r.gobbleStringLiteral()
+	case ch == OBRACK_CODE:
+		return r.gobbleArray()
+	}
+
+	to_check := substring(string(r.expr), r.index, r.GetMaxUnaryOperatorsLength())
+	tc_len := strlen(to_check)
+
+	for tc_len > 0 {
+		if contains(r.unaryOps, to_check) {
+			r.index += tc_len
+			return UnaryExpression{
+				Operator: to_check,
+				Argument: r.gobbleToken(),
+			}
+		}
+
+		tc_len--
+		to_check = substring(to_check, 0, tc_len) // TODO: Optimize this operation
+	}
+
+	if isIdentifierStart(ch) || ch == OPAREN_CODE {
+		return r.gobbleVariable()
+	}
+
+	return nil
+}
+
+func (r *ParsingRun) gobbleNumericLiteral() Expression {
+	var number, ch string
+	var chCode int
+	for isDecimalDigit(r.exprICode()) {
+		number += r.exprI()
+		r.index++
+	}
+
+	if r.exprICode() == PERIOD_CODE {
+		number += r.exprI()
+		r.index++
+
+		for isDecimalDigit(r.exprICode()) {
+			number += r.exprI()
+			r.index++
+		}
+	}
+
+	ch = r.exprI()
+	if ch == "e" || ch == "E" { // exponent marker
+		number += r.exprI()
+		r.index++
+		ch = r.exprI()
+		if ch == "+" || ch == "-" { // exponent sign
+			number += r.exprI()
+			r.index++
+		}
+
+		for isDecimalDigit(r.exprICode()) { //exponent itself
+			number += r.exprI()
+			r.index++
+		}
+
+		// check that the last digit is a decimal digit
+		r.index--
+		isDecimalDigit := isDecimalDigit(r.exprICode())
+		r.index++
+
+		if !isDecimalDigit {
+			ThrowError("Expected exponent ("+number+r.exprI()+")", r.index)
+		}
+
+	}
+
+	chCode = r.exprICode()
+
+	// Check to make sure this isn't a variable name that start with a number (123abc)
+	if isIdentifierStart(chCode) {
+		ThrowError("Variable names cannot start with a number ("+number+r.exprI()+")", r.index)
+	} else if chCode == PERIOD_CODE {
+		ThrowError("Unexpected period", r.index)
+	}
+
+	// parse the number
+	var floatNumber float64
+	if err := json.Unmarshal([]byte(number), &floatNumber); err != nil {
+		panic(err)
+	}
+
+	// and return the literal!
+	return Literal{
+		Value: floatNumber,
+		Raw:   number,
+	}
+}
+
+// Parses a string literal, staring with single or double quotes with basic support for escape codes
+// e.g. `"hello world"`, `'this is\nJSEP'`
+func (r *ParsingRun) gobbleStringLiteral() Expression {
+	var str string
+
+	quote := r.exprI()
+	r.index++
+
+	var closed bool
+	for r.index < r.length {
+		ch := r.exprI()
+		r.index++
+
+		if ch == quote {
+			closed = true
+			break
+		}
+		if ch != "\\" {
+			str += ch
+			continue
+		}
+
+		ch = r.exprI()
+		r.index++
+		switch ch {
+		case "n":
+			str += "\n"
+		case "r":
+			str += "\r"
+		case "t":
+			str += "\t"
+		case "b":
+			str += "\b"
+		case "f":
+			str += "\f"
+		case "v":
+			str += "\x0B"
+		case "\\":
+			str += "\\"
+
+		// default: just add the character literally.
+		default:
+			str += ch
+		}
+	}
+
+	if !closed {
+		ThrowError("Unclosed quote after \""+str+"\"", r.index)
+	}
+
+	return Literal{
+		Value: str,
+		Raw:   quote + str + quote,
+	}
+}
+
+// Gobbles only identifiers
+// e.g.: `foo`, `_value`, `$x1`
+// Also, this function checks if that identifier is a literal:
+// (e.g. `true`, `false`, `null`) or `this`
+func (r *ParsingRun) gobbleIdentifier() Expression {
+	ch := r.exprICode()
+	start := r.index
+
+	if !isIdentifierStart(ch) {
+		ThrowError("Unexpected "+r.exprI(), r.index)
+	}
+	r.index++
+
+	for r.index < r.length {
+		ch := r.exprICode()
+		if !isIdentifierPart(ch) {
+			break
+		}
+		r.index++
+	}
+
+	identifier := substring(string(r.expr), start, r.index-start)
+
+	if c, ok := r.constants[identifier]; ok {
+		return Literal{
+			Value: c,
+			Raw:   identifier,
+		}
+	} else {
+		return Identifier{
+			Name: identifier,
+		}
+	}
+}
+
+// Gobbles a list of arguments within the context of a function call
+// or array literal. This function also assumes that the opening character
+// `(` or `[` has already been gobbled, and gobbles expressions and commas
+// until the terminator character `)` or `]` is encountered.
+// e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
+func (r *ParsingRun) gobbleArguments(termination int) (args []Expression) {
+	for r.index < r.length {
+		r.gobbleSpaces()
+		ch_i := r.exprICode()
+		if ch_i == termination {
+			r.index++
+			break
+		}
+
+		if ch_i == COMMA_CODE {
+			r.index++
+			continue
+		}
+
+		node := r.gobbleExpression()
+		if node == nil || node.Type() == COMPOUND {
+			ThrowError("Expected comma", r.index)
+		}
+		args = append(args, node)
+	}
+
+	if args == nil {
+		args = []Expression{}
+	}
+
+	return args
+}
+
+// Gobble a non-literal variable name. This variable name may include properties
+// e.g. `foo`, `bar.baz`, `foo['bar'].baz`
+// It also gobbles function calls:
+// e.g. `Math.acos(obj.angle)`
+func (r *ParsingRun) gobbleVariable() (node Expression) {
+
+	ch_i := r.exprICode()
+	if ch_i == OPAREN_CODE {
+		node = r.gobbleGroup()
+	} else {
+		node = r.gobbleIdentifier()
+	}
+
+loop:
+	for {
+		r.gobbleSpaces()
+		ch_i := r.exprICode()
+		r.index++
+
+		switch ch_i {
+		case PERIOD_CODE:
+			r.gobbleSpaces()
+			node = MemberExpression{
+				Computed: false,
+				Object:   node,
+				Property: r.gobbleIdentifier(),
+			}
+		case OBRACK_CODE:
+			node = MemberExpression{
+				Computed: true,
+				Object:   node,
+				Property: r.gobbleExpression(),
+			}
+			r.gobbleSpaces()
+			ch_i = r.exprICode()
+			if ch_i != CBRACK_CODE {
+				ThrowError("Unclosed [", r.index)
+			}
+			r.index++
+		case OPAREN_CODE:
+			// A function call is being made; gobble all the arguments
+			node = CallExpression{
+				Arguments: r.gobbleArguments(CPAREN_CODE),
+				Callee:    node,
+			}
+		default:
+			r.index--
+			break loop
+		}
+	}
+	return
+}
+
+// Responsible for parsing a group of things within parentheses `()`
+// This function assumes that it needs to gobble the opening parenthesis
+// and then tries to gobble everything within that parenthesis, assuming
+// that the next thing it should see is the close parenthesis. If not,
+// then the expression probably doesn't have a `)`
+func (r *ParsingRun) gobbleGroup() Expression {
+	r.index++
+	node := r.gobbleExpression()
+
+	r.gobbleSpaces()
+	if r.exprICode() != CPAREN_CODE {
+		ThrowError("Unclosed (", r.index)
+	}
+
+	r.index++
+	return node
+}
+
+// Responsible for parsing Array literals `[1, 2, 3]`
+// This function assumes that it needs to gobble the opening bracket
+// and then tries to gobble the expressions as arguments.
+func (r *ParsingRun) gobbleArray() Expression {
+	r.index++
+
+	return ArrayExpression{
+		Elements: r.gobbleArguments(CBRACK_CODE),
 	}
 }
