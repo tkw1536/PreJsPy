@@ -2,9 +2,13 @@
 PreJsPy
 =======
 
-.. image:: https://travis-ci.com/tkw1536/PreJsPy.svg?branch=master
-   :alt: Build Status
-   :target: https://travis-ci.com/tkw1536/PreJsPy
+.. image:: https://github.com/tkw1536/PreJsPy/actions/workflows/python.yml/badge.svg
+   :alt: Python Build Status
+   :target: https://github.com/tkw1536/PreJsPy/actions/workflows/python.yml
+
+.. image:: https://github.com/tkw1536/PreJsPy/actions/workflows/js.yml/badge.svg
+   :alt: JavaScript Build Status
+   :target: https://github.com/tkw1536/PreJsPy/actions/workflows/js.yml
 
 What is this?
 =============
