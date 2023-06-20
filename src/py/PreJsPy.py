@@ -83,6 +83,8 @@ class PreJsPy(object):
         :rtype: int
         """
 
+        if len(o.keys()) == 0:
+            return 0
         return max(map(len, o.keys()))
 
     @staticmethod
@@ -94,7 +96,8 @@ class PreJsPy(object):
 
         :rtype: int
         """
-
+        if len(ary) == 0:
+            return 0
         return max(map(len, ary))
 
     @staticmethod
