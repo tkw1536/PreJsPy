@@ -13,7 +13,7 @@ PreJsPy
 What is this?
 =============
 
-PreJsPy is highly configurable a precedence-based parser written in both Python and JavaScript.
+PreJsPy is highly configurable a precedence-based parser written in both Python (3.8+) and JavaScript (ES5+).
 The default grammar is based on a subset of JavaScript but can be adapted to a lot of different scenarios.
 
 .. code:: python
@@ -55,7 +55,7 @@ Grammar Features
       * API: Use `setIdentifiersEnabled` / `getIdentifiersEnabled` with a boolean to enable or disable them
     * Acessors
       * can be dynamic or not `foo.bar`, `foo['bar']`
-  
+      * Example: `{"object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression", "computed": false, "property": {"name": "world", "type": "Identifier"}}`
 * Various types of literals
    * Numeric Literals (```42.001```)
       * decimal notation (```-42```)
