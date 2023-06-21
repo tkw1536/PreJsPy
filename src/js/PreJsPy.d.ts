@@ -90,7 +90,10 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     setBinaryOperators(operators: Record<B, number>): Record<B, number>
 
     getTertiaryOperatorEnabled(): boolean
-    setTertiaryOperatorEnabled(enabled): boolean;
+    setTertiaryOperatorEnabled(enabled: boolean): boolean;
+
+    getIdentifiersEnabled(): boolean
+    setIdentifiersEnabled(enabled: boolean): boolean;
 
     parse(source: string): Expression<L, U, B>
 }

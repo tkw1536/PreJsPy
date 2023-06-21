@@ -229,6 +229,22 @@
             __tertiary = e;
         };
 
+        /**
+         * Gets a boolean indicating if identifiers are enabled or not.
+         * @returns {boolean}
+         */
+        this.getIdentifiersEnabled = function () {
+            return __identifiers;
+        };
+
+        /**
+         * Enables or disables parsing of identifiers.
+         * @param e {boolean} State of identifiers to set.
+         */
+        this.setIdentifiersEnabled = function (b) {
+            __identifiers = b;
+        };
+
         // =========
         // INIT CODE
         // =========
@@ -263,7 +279,9 @@
         var __tertiary;
         this.setTertiaryOperatorEnabled(true);
 
-
+        // enable identifiers
+        var __identifiers;
+        this.setIdentifiersEnabled(true);
 
         // ============
         // MISC HELPERS
@@ -596,6 +614,9 @@
                             raw: identifier
                         };
                     } else {
+                        if (!self.getIdentifiersEnabled()) {
+                            throwError('Unknown literal "' + identifier + '"', index);
+                        }
                         return {
                             type: IDENTIFIER,
                             name: identifier

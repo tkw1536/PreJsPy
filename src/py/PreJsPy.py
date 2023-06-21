@@ -229,6 +229,23 @@ class PreJsPy(object):
         """
 
         self.__tertiary = e
+    
+    def getIdentifiersEnabled(self):
+        """ Gets a boolean indicating if identifiers are enabled or not.
+
+        :rtype: bool
+        """
+
+        return self.__identifiers
+
+    def setIdentifiersEnabled(self, e):
+        """ Enables or disables parsing of identifiers.
+
+        :param e: State of identifiers to set.
+        :type e: bool
+        """
+
+        self.__identifiers = e
 
     # =========
     # INIT CODE
@@ -239,7 +256,6 @@ class PreJsPy(object):
         """ Creates a new PreJSPyParser instance. """
 
         # Intitialise a set of literal constants for the parser.
-        self.__constants = None
         self.setConstants({
             'true': True,
             'false': False,
@@ -247,14 +263,10 @@ class PreJsPy(object):
         })
 
         # Set a list of unary operators
-        self.__unary_ops = None
-        self.__max_unop_len = None
         self.setUnaryOperators(['-', '!', '~', '+'])
 
         # Set a list of binary operators and their preferences.
         # See http://en.wikipedia.org/wiki/Order_of_operations#Programming_language
-        self.__binary_ops = None
-        self.__max_binop_len = None
         self.setBinaryOperators({
             '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5,
             '==': 6, '!=': 6, '===': 6, '!==': 6,
@@ -265,8 +277,10 @@ class PreJsPy(object):
         })
 
         # enable the tertiary operator
-        self.__tertiary = None
         self.setTertiaryOperatorEnabled(True)
+
+        # enable identifiers
+        self.setIdentifiersEnabled(True)
 
     # ============
     # MISC HELPERS
@@ -634,6 +648,9 @@ class PreJsPy(object):
                     'raw': identifier
                 }
             else:
+                if not self.getIdentifiersEnabled():
+                    PreJsPy.__throw_error('Unknown literal "' + identifier + '"',
+                                            state['index'])
                 return {
                     'type': PreJsPy.IDENTIFIER,
                     'name': identifier

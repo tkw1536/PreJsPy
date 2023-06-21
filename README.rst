@@ -45,10 +45,17 @@ Grammar Features
 * Symbolic Values
    * Constants
       * such as ```true```, ```false``` and ```null```
-      * configurable: Arbitrary constants can be added
+      * configurable: Arbitrary constants can be added 
+      * Example: `{"raw": "true", "value": true, "type": "Literal"}`
+      * API: Use `setConstants` / `getConstants` with a map from strings to desired constants
    * Identifiers
-      * may contain  $,\_ or alphanumeric chacraters but may not start with a number
-      * can include property names and accessors, for example `foo`, `bar.baz`, `foo['bar'].baz`
+      * may contain  $,\_ or alphanumeric characters but may not start with a number
+      * for example `foo`
+      * Example: `{"name": "foo", "type": "Identifier"}`
+      * API: Use `setIdentifiersEnabled` / `getIdentifiersEnabled` with a boolean to enable or disable them
+    * Acessors
+      * can be dynamic or not `foo.bar`, `foo['bar']`
+  
 * Various types of literals
    * Numeric Literals (```42.001```)
       * decimal notation (```-42```)
