@@ -90,14 +90,8 @@ The API in JavaScript and python are almost identical. The only differences come
 
   var parser = new PreJsPy(); // creates a new parser
 
-  parser.getConstants() // returns an object containing constants
-  parser.setConstants(d) // sets the current constants know to the parser
-
-  parser.getUnaryOperators() // gets an array of unary operators
-  parser.setUnaryOperators(ary) // sets an array of unary operators
-
-  parser.getBinaryOperators() // returns an object mapping binary operators to their precedence
-  parser.setBinaryOperators(ary) // sets the binary operators to precedence mapping
+  parser.getConfig() // returns a configuration object of the parser
+  parser.setConfig(config) // sets configuration of the parser. May be partial.
 
   parser.parse(s) // parses a string into a AST
 
@@ -105,14 +99,8 @@ The API in JavaScript and python are almost identical. The only differences come
 
   parser = PreJsPy() # creates a new parser
 
-  parser.getConstants() # returns an object containing constants
-  parser.setConstants(d) # sets the current constants know to the parser
-
-  parser.getUnaryOperators() # gets an array of unary operators
-  parser.setUnaryOperators(ary) # sets an array of unary operators
-
-  parser.getBinaryOperators() # returns an object mapping binary operators to their precedence
-  parser.setBinaryOperators(ary) # sets the binary operators to precedence mapping
+  parser.getConfig() # returns a configuration object of the parser
+  parser.setConfig(config) # sets configuration of the parser. May be partial.
 
   parser.parse(s) # parses a string into a AST
 

@@ -5,7 +5,7 @@
 // This code is heavily based on the JavaScript version JSEP
 // The original code is (c) 2013 Stephen Oney, http://jsep.from.so/ and licensed under MIT
 
-///<reference path="PreJsPy.d.ts" />
+///<reference path="./PreJsPy.d.ts" />
 
 (function (root) {
 
@@ -183,7 +183,7 @@
         var self = this;
 
         // ==================
-        // SETTERS && GETTERS
+        // CONFIG
         // ==================
         
         /**
@@ -236,10 +236,6 @@
                 if (typeof config.Features.Calls === 'boolean') {
                     __config.Features.Calls = config.Features.Calls
                 }
-                if (typeof config.Features.Calls === 'boolean') {
-                    __config.Features.Calls = config.Features.Calls
-                }
-
                 if (typeof config.Features.Members === 'object') {
                     if (typeof config.Features.Members.Computed === 'boolean') {
                         __config.Features.Members.Computed = config.Features.Members.Computed
@@ -264,6 +260,10 @@
 
             return this.getConfig()
         }
+
+        // ==================
+        // LEGACY CONFIG
+        // ==================
 
         /**
          * Gets the constants to be used by this parser.
@@ -340,7 +340,7 @@
          * @returns {boolean}
          */
         this.getTertiaryOperatorEnabled = function () {
-            return this.getConfig().Features.Tertiary
+            return this.getConfig().Features.Tertiary;
         };
 
         /**
@@ -798,7 +798,7 @@
                             };
                         } else if (ch_i === OBRACK_CODE) {
                             if (!__config.Features.Members.Computed) {
-                                throwError('Unexpected dynamic MemberExpression', index)
+                                throwError('Unexpected computed MemberExpression', index)
                             }
                             node = {
                                 type: MEMBER_EXP,
@@ -851,7 +851,7 @@
                 // and then tries to gobble the expressions as arguments.
                 gobbleArray = function () {
                     if (!__config.Features.Literals.Array) {
-                        throwError('Unexpected array literal', index)
+                        throwError('Unexpected array literal', index);
                     }
 
                     index++;

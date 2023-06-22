@@ -114,13 +114,74 @@ class PreJsPy(object):
         return (ch == 36) or (ch == 95) or (ch >= 65 and ch <= 90) or (
         ch >= 97 and ch <= 122) or (ch >= 48 and ch <= 57) or (ch > 128)
 
-    #
-    # SETTERS && GETTERS
-    #
+    # =======
+    # CONFIG
+    # =======
+
+    def getConfig(self):
+        """ Gets the current config used by this parser. """
+        return {
+            'Operators': {
+                'Literals': PreJsPy.__copyDict(self.__config["Operators"]["Literals"]),
+                'Unary': PreJsPy.__copyList(self.__config["Operators"]["Unary"]),
+                'Binary': PreJsPy.__copyDict(self.__config["Operators"]["Binary"]),
+            },
+            'Features': {
+                'Tertiary': self.__config["Features"]["Tertiary"], # dones
+                'Identifiers': self.__config["Features"]["Identifiers"],
+                'Calls': self.__config["Features"]["Calls"],
+                'Members': PreJsPy.__copyDict(self.__config["Features"]["Members"]),
+                'Literals': PreJsPy.__copyDict(self.__config["Features"]["Literals"]),
+            }
+        }
+
+    def setConfig(self, config):
+        """ Sets the config used by this parser. 
+
+        :param config: (Possibly partial) configuration to use.
+        """
+
+        if 'Operators' in config:
+                if 'Literals' in config["Operators"]:
+                    self.__config["Operators"]["Literals"] = PreJsPy.__copyDict(config["Operators"]["Literals"])
+                if 'Unary' in config["Operators"]:
+                    self.__config["Operators"]["Unary"] = PreJsPy.__copyDict(config["Operators"]["Unary"])
+                    self.__max_uops_len = PreJsPy.__getMaxMemLen(self.__config["Operators"]["Unary"])
+                if 'Binary' in config["Operators"]:
+                    self.__config["Operators"]["Binary"] = PreJsPy.__copyDict(config["Operators"]["Binary"])
+                    self.__max_binop_len = PreJsPy.__getMaxKeyLen(self.__config["Operators"]["Binary"])
+        if 'Features' in config:
+            if 'Tertiary' in config["Features"]:
+                self.__config["Features"]["Tertiary"] = config["Features"]["Tertiary"]
+            if 'Identifiers' in config["Features"]:
+                self.__config["Features"]["Identifiers"] = config["Features"]["Identifiers"]
+            if 'Calls' in config["Features"]:
+                self.__config["Features"]["Calls"] = config["Features"]["Calls"]
+            
+            if 'Members' in config["Features"]:
+                if 'Computed' in config["Features"]["Members"]:
+                    self.__config["Features"]["Members"]["Computed"] = config["Features"]["Members"]["Computed"]
+                if 'Static' in config["Features"]["Members"]:
+                    self.__config["Features"]["Members"]["Static"] = config["Features"]["Members"]["Static"]
+            if 'Literals' in config["Features"]:
+                if 'Array' in config["Features"]["Literals"]:
+                    self.__config["Features"]["Literals"]["Array"] = config["Features"]["Literals"]["Array"]
+                if 'Numeric' in config["Features"]["Literals"]:
+                    self.__config["Features"]["Literals"]["Numeric"] = config["Features"]["Literals"]["Numeric"]
+                if 'String' in config["Features"]["Literals"]:
+                    self.__config["Features"]["Literals"]["String"] = config["Features"]["Literals"]["String"]
+        
+        return self.getConfig()
+
+    # =======
+    # LEGACY CONFIG
+    # =======
+
 
     def getConstants(self):
         """ Gets the constants to be used by this parser. """
-        return self.__constants
+
+        return self.getConfig()["Operators"]["Literals"]
 
     def setConstants(self, d):
         """ Sets the constants to be used by this parser.
@@ -128,12 +189,12 @@ class PreJsPy(object):
         :param d: Constants to set.
         """
 
-        self.__constants = d
+        return self.setConfig({'Operators': {'Literals': d}})['Operators']['Literals']
 
     def getUnaryOperators(self):
         """ Gets the unary operators known to this parser. """
 
-        return self.__unary_ops
+        return self.getConfig()["Operators"]["Unary"]
 
     def getMaxUnaryOperatorsLength(self):
         """ Gets the length of the maximal unary operator. """
@@ -146,13 +207,12 @@ class PreJsPy(object):
         :param ary: List of unary operators to set.
         """
 
-        self.__unary_ops = ary
-        self.__max_uops_len = PreJsPy.__getMaxMemLen(ary)
+        return self.setConfig({'Operators': {'Unary': ary}})['Operators']['Unary']
 
     def getBinaryOperators(self):
         """ Gets the binary operators known to this parser. """
 
-        return self.__binary_ops
+        return self.getConfig()["Operators"]["Binary"]
 
     def getMaxBinaryOperatorsLength(self):
         """ Gets the length of the maximal binary operator. """
@@ -165,14 +225,13 @@ class PreJsPy(object):
         :param d: Dictionary of binary operators to set.
         """
 
-        self.__binary_ops = d
-        self.__max_binop_len = PreJsPy.__getMaxKeyLen(d)
+        return self.setConfig({'Operators': {'Binary': d}})['Operators']['Binary']
 
     def getTertiaryOperatorEnabled(self):
         """ Gets a boolean indicating if the tertiary operator is enabled or
         not. """
 
-        return self.__tertiary
+        return self.getConfig()['Features']['Tertiary']
 
     def setTertiaryOperatorEnabled(self, e):
         """ Enables or disables the tertiary operator.
@@ -180,20 +239,7 @@ class PreJsPy(object):
         :param e: State of the tertiary operator to set.
         """
 
-        self.__tertiary = e
-    
-    def getIdentifiersEnabled(self):
-        """ Gets a boolean indicating if identifiers are enabled or not. """
-
-        return self.__identifiers
-
-    def setIdentifiersEnabled(self, e):
-        """ Enables or disables parsing of identifiers.
-
-        :param e: State of identifiers to set.
-        """
-
-        self.__identifiers = e
+        return self.setConfig({'Features': {'Tertirary': e}})['Features']['Tertiary']
 
     # =========
     # INIT CODE
@@ -203,32 +249,8 @@ class PreJsPy(object):
     def __init__(self):
         """ Creates a new PreJSPyParser instance. """
 
-        # Intitialise a set of literal constants for the parser.
-        self.setConstants({
-            'true': True,
-            'false': False,
-            'null': None
-        })
-
-        # Set a list of unary operators
-        self.setUnaryOperators(['-', '!', '~', '+'])
-
-        # Set a list of binary operators and their preferences.
-        # See http://en.wikipedia.org/wiki/Order_of_operations#Programming_language
-        self.setBinaryOperators({
-            '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5,
-            '==': 6, '!=': 6, '===': 6, '!==': 6,
-            '<': 7, '>': 7, '<=': 7, '>=': 7,
-            '<<': 8, '>>': 8, '>>>': 8,
-            '+': 9, '-': 9,
-            '*': 10, '/': 10, '%': 10
-        })
-
-        # enable the tertiary operator
-        self.setTertiaryOperatorEnabled(True)
-
-        # enable identifiers
-        self.setIdentifiersEnabled(True)
+        self.__config = self.__class__.defaultConfig()
+        self.setConfig(self.__config)
 
     # ============
     # MISC HELPERS
@@ -240,10 +262,18 @@ class PreJsPy(object):
         :param op_val: Value of operator to lookup.
         """
 
-        if op_val in self.getBinaryOperators().keys():
-            return self.getBinaryOperators()[op_val]
+        if op_val in self.__config["Operators"]["Binary"]:
+            return self.__config["Operators"]["Binary"][op_val]
         else:
             return 0
+    
+    @staticmethod
+    def __copyDict(dict):
+        return dict.copy()
+
+    @staticmethod
+    def __copyList(lst):
+        return lst.copy()
 
     # =======
     # PARSING
@@ -305,7 +335,7 @@ class PreJsPy(object):
                         PreJsPy.__throw_error('Expected expression',
                                            state['index'])
 
-                    if not self.getTertiaryOperatorEnabled():
+                    if not self.__config["Features"]['Tertiary']:
                         PreJsPy.__throw_error('Unexpected tertiary operator',
                                               state['index'])
 
@@ -326,10 +356,10 @@ class PreJsPy(object):
         # then, return that binary operation
         def gobbleBinaryOp():
             gobbleSpaces()
-            to_check = expr[state['index']:state['index'] + self.getMaxBinaryOperatorsLength()]
+            to_check = expr[state['index']:state['index'] + self.__max_binop_len]
             tc_len = len(to_check)
             while tc_len > 0:
-                if to_check in self.getBinaryOperators().keys():
+                if to_check in self.__config["Operators"]["Binary"]:
                     state['index'] += tc_len
                     return to_check
                 tc_len -= 1
@@ -431,10 +461,10 @@ class PreJsPy(object):
                 return gobbleArray()
             else:
                 to_check = expr[
-                           state['index']:state['index'] + self.getMaxUnaryOperatorsLength()]
+                           state['index']:state['index'] + self.__max_uops_len]
                 tc_len = len(to_check)
                 while tc_len > 0:
-                    if to_check in self.getUnaryOperators():
+                    if to_check in self.__config["Operators"]["Unary"]:
                         state['index'] += tc_len
                         return {
                             'type': PreJsPy.UNARY_EXP,
@@ -498,6 +528,9 @@ class PreJsPy(object):
             elif chCode == PreJsPy.PERIOD_CODE:
                 PreJsPy.__throw_error('Unexpected period', state['index'])
 
+            if not self.__config["Features"]["Literals"]["Numeric"]:
+                PreJsPy.__throwError('Unexpected numeric literal', state['index'] - number.length)
+            
             return {
                 'type': PreJsPy.LITERAL,
                 'value': float(number),
@@ -508,6 +541,8 @@ class PreJsPy(object):
         # e.g. `"hello world"`, `'this is\nJSEP'`
         def gobbleStringLiteral():
             s = ''
+
+            index_start = state['index']
 
             quote = exprI(state['index'])
             state['index'] += 1
@@ -551,6 +586,8 @@ class PreJsPy(object):
             if not closed:
                 PreJsPy.__throw_error('Unclosed quote after "' + s + '"',
                                    state['index'])
+            if not self.__config["Features"]["Literals"]["String"]:
+                PreJsPy.__throw_error('Unexpected string literal', index_start)
 
             return {
                 'type': PreJsPy.LITERAL,
@@ -583,14 +620,14 @@ class PreJsPy(object):
 
             identifier = expr[start:state['index']]
 
-            if identifier in self.getConstants().keys():
+            if identifier in self.__config["Operators"]["Literals"]:
                 return {
                     'type': PreJsPy.LITERAL,
-                    'value': self.getConstants()[identifier],
+                    'value': self.__config["Operators"]["Literals"][identifier],
                     'raw': identifier
                 }
             else:
-                if not self.getIdentifiersEnabled():
+                if not self.__config["Features"]["Identifiers"]:
                     PreJsPy.__throw_error('Unknown literal "' + identifier + '"',
                                             state['index'])
                 return {
@@ -651,6 +688,9 @@ class PreJsPy(object):
                 state['index'] += 1
 
                 if ch_i == PreJsPy.PERIOD_CODE:
+                    if not self.__config["Features"]["Members"]["Static"]:
+                        PreJsPy.__throwError('Unexpected static MemberExpression', state['index'])
+
                     gobbleSpaces()
 
                     node = {
@@ -660,6 +700,9 @@ class PreJsPy(object):
                         'property': gobbleIdentifier()
                     }
                 elif ch_i == PreJsPy.OBRACK_CODE:
+                    if not self.__config["Features"]["Members"]["Computed"]:
+                        PreJsPy.__throwError('Unexpected computed MemberExpression', state['index'])
+                
                     node = {
                         'type': PreJsPy.MEMBER_EXP,
                         'computed': True,
@@ -676,6 +719,8 @@ class PreJsPy(object):
 
                     state['index'] += 1
                 elif ch_i == PreJsPy.OPAREN_CODE:
+                    if not self.__config["Features"]["Calls"]:
+                        PreJsPy.__throw_error('Unexpected function call', state['index'])
                     # A function call is being made; gobble all the arguments
                     node = {
                         'type': PreJsPy.CALL_EXP,
@@ -709,6 +754,9 @@ class PreJsPy(object):
         # This function assumes that it needs to gobble the opening bracket
         # and then tries to gobble the expressions as arguments.
         def gobbleArray():
+            if not self.__config["Features"]["Literals"]["Array"]:
+                PreJsPy.__throwError('Unexpected array literal', state['index'])
+
             state["index"] += 1
 
             return {
@@ -747,3 +795,40 @@ class PreJsPy(object):
                 'type': PreJsPy.COMPOUND,
                 'body': nodes
             }
+
+    @staticmethod
+    def defaultConfig():
+        """ Returns the default configuration """
+        return {
+            'Operators': {
+                'Literals': {
+                    'true': True,
+                    'false': False,
+                    'null': None,
+                },
+                'Unary': ['-', '!', '~', '+'],
+                'Binary': {
+                    '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5,
+                    '==': 6, '!=': 6, '===': 6, '!==': 6,
+                    '<': 7, '>': 7, '<=': 7, '>=': 7,
+                    '<<': 8, '>>': 8, '>>>': 8,
+                    '+': 9, '-': 9,
+                    '*': 10, '/': 10, '%': 10
+                },
+            },
+        
+            'Features': {
+                'Tertiary': True,
+                'Identifiers': True,
+                'Calls': True,
+                'Members': {
+                    'Static': True,
+                    'Computed': True,
+                },
+                'Literals': {
+                    'Numeric': True,
+                    'String': True,
+                    'Array': True,
+                }
+            }   
+        }

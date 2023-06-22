@@ -1,12 +1,5 @@
-#
-# Preamble -- make sure that PreJsPy is in the path.
-# You won't have to do this in production.
-#
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src", "py"))
-import PreJsPy
+# in production, use the PreJsPy module
+from src.py import PreJsPy
 
 import json
 
