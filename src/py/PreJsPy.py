@@ -41,11 +41,7 @@ class PreJsPy(object):
         """ Throws a parser error with a given message and a given index.
 
         :param msg: Message of error to throw.
-        :type msg: str
-
         :param index: Character index at which the error should be thrown.
-        :type index: int
-
         """
         msg = '%s at character %d' % (msg, index)
         raise Exception(msg)
@@ -55,15 +51,8 @@ class PreJsPy(object):
         """ Utility function that creates a binary expression to be returned.
 
         :param operator: Operator to use for binary expression.
-        :type operator: str
-
         :param left: Left expression to use for the binary expression.
-        :type left: dict
-
         :param right: Right expression to use for the binary expression.
-        :type right: dict
-
-        :rtype: dict
         """
 
         return {
@@ -78,9 +67,6 @@ class PreJsPy(object):
         """ Gets the longest key length of an object
 
         :param o: Object to iterate over
-        :type o: dict
-
-        :rtype: int
         """
 
         if len(o.keys()) == 0:
@@ -92,9 +78,6 @@ class PreJsPy(object):
         """ Gets the maximum length of the member of any members of an array.
 
         :param ary: Array to iterate over.
-        :type ary: list
-
-        :rtype: int
         """
         if len(ary) == 0:
             return 0
@@ -105,9 +88,6 @@ class PreJsPy(object):
         """ Checks if a character is a decimal digit.
 
         :param ch: Code of character to check.
-        :type ch: int
-
-        :rtype: bool
         """
 
         return (ch >= 48 and ch <= 57)  # 0...9
@@ -117,9 +97,6 @@ class PreJsPy(object):
         """ Checks if a character is the start of an identifier.
 
         :param ch: Code of character to check.
-        :type ch: int
-
-        :rtype: bool
         """
 
         # '$', A..Z and a..z and non-ascii
@@ -131,9 +108,6 @@ class PreJsPy(object):
         """ Checks if a character is part of an identifier.
 
         :param ch: Code of character to check.
-        :type ch: int
-
-        :rtype: bool
         """
 
         # `$`,  `_`, A...Z, a...z and 0...9 and non-ascii
@@ -145,34 +119,24 @@ class PreJsPy(object):
     #
 
     def getConstants(self):
-        """ Gets the constants to be used by this parser.
-
-        :rtype: dict
-        """
+        """ Gets the constants to be used by this parser. """
         return self.__constants
 
     def setConstants(self, d):
         """ Sets the constants to be used by this parser.
 
         :param d: Constants to set.
-        :type d: dict
         """
 
         self.__constants = d
 
     def getUnaryOperators(self):
-        """ Gets the unary operators known to this parser.
-
-        :rtype: list
-        """
+        """ Gets the unary operators known to this parser. """
 
         return self.__unary_ops
 
     def getMaxUnaryOperatorsLength(self):
-        """ Gets the length of the maximal unary operator.
-
-        :rtype: int
-        """
+        """ Gets the length of the maximal unary operator. """
 
         return self.__max_uops_len
 
@@ -180,25 +144,18 @@ class PreJsPy(object):
         """ Sets the unary operators known to this parser.
 
         :param ary: List of unary operators to set.
-        :type ary: list
         """
 
         self.__unary_ops = ary
         self.__max_uops_len = PreJsPy.__getMaxMemLen(ary)
 
     def getBinaryOperators(self):
-        """ Gets the binary operators known to this parser.
-
-        :rtype: dict
-        """
+        """ Gets the binary operators known to this parser. """
 
         return self.__binary_ops
 
     def getMaxBinaryOperatorsLength(self):
-        """ Gets the length of the maximal binary operator.
-
-        :rtype: int
-        """
+        """ Gets the length of the maximal binary operator. """
 
         return self.__max_binop_len
 
@@ -206,7 +163,6 @@ class PreJsPy(object):
         """ Sets the  binary operators known to this parser.
 
         :param d: Dictionary of binary operators to set.
-        :type d: dict
         """
 
         self.__binary_ops = d
@@ -214,10 +170,7 @@ class PreJsPy(object):
 
     def getTertiaryOperatorEnabled(self):
         """ Gets a boolean indicating if the tertiary operator is enabled or
-        not.
-
-        :rtype: bool
-        """
+        not. """
 
         return self.__tertiary
 
@@ -225,16 +178,12 @@ class PreJsPy(object):
         """ Enables or disables the tertiary operator.
 
         :param e: State of the tertiary operator to set.
-        :type e: bool
         """
 
         self.__tertiary = e
     
     def getIdentifiersEnabled(self):
-        """ Gets a boolean indicating if identifiers are enabled or not.
-
-        :rtype: bool
-        """
+        """ Gets a boolean indicating if identifiers are enabled or not. """
 
         return self.__identifiers
 
@@ -242,7 +191,6 @@ class PreJsPy(object):
         """ Enables or disables parsing of identifiers.
 
         :param e: State of identifiers to set.
-        :type e: bool
         """
 
         self.__identifiers = e
@@ -290,9 +238,6 @@ class PreJsPy(object):
         """
         Returns the precedence of a binary operator or `0` if it isn't a binary operator.
         :param op_val: Value of operator to lookup.
-        :type op_val: str
-
-        :rtype: int
         """
 
         if op_val in self.getBinaryOperators().keys():
@@ -308,9 +253,6 @@ class PreJsPy(object):
         """ Parses an expression expr into a parse tree.
 
         :param expr: Expression to parse.
-        :type expr: str
-
-        :rtype: dict
         """
 
         # `index` stores the character number we are currently at while `length` is a constant

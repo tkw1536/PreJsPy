@@ -22,57 +22,57 @@ export type Expression<L, U extends string, B extends string> =
     Condition<L, U, B> |
     Ary<L, U, B>;
 
-interface Compound<L, U extends string, B extends string> {
+type Compound<L, U extends string, B extends string> = {
     type: "Compound";
     body: Expression<L, U, B>[];
 }
 
 
-interface Identifier {
+type Identifier = {
     type: "Identifier";
     name: string;
 }
 
-interface Member<L, U extends string, B extends string> {
+type Member<L, U extends string, B extends string> = {
     type: "MemberExpression";
     computed: boolean;
     object: Expression<L, U, B>,
-    name: Expression<L, U, B>,
+    property: Expression<L, U, B>,
 }
 
-interface Literal<L> {
+type Literal<L> = {
     type: "Literal";
     value: L | number;
-    raw: true;
+    raw: string;
 }
 
-interface Call<L, U extends string, B extends string> {
+type Call<L, U extends string, B extends string> = {
     type: "CallExpression";
     arguments: Expression<L, U, B>[];
     callee: Expression<L, U, B>;
 }
 
-interface Unary<L, U extends string, B extends string> {
+type Unary<L, U extends string, B extends string> = {
     type: "UnaryExpression";
     operator: U;
     argument: Expression<L, U, B>;
 }
 
-interface Binary<L, U extends string, B extends string> {
+type Binary<L, U extends string, B extends string> = {
     type: "BinaryExpression";
     operator: B;
     left: Expression<L, U, B>;
     right: Expression<L, U, B>;
 }
 
-interface Condition<L, U extends string, B extends string> {
+type Condition<L, U extends string, B extends string> = {
     type: "ConditionalExpression";
     test: Expression<L, U, B>;
     consequent: Expression<L, U, B>;
     alternate: Expression<L, U, B>;
 }
 
-interface Ary<L, U extends string, B extends string> {
+type Ary<L, U extends string, B extends string> = {
     type: "ArrayExpression";
     elements: Expression<L, U, B>[];
 }
