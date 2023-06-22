@@ -4,55 +4,56 @@ from typing import Final, Generic
 from typing import Literal as tLiteral
 from typing import Sequence, TypeAlias, TypedDict, TypeVar, Union
 
-L = TypeVar('L')
-U = TypeVar('U', bound=str)
-B = TypeVar('B', bound=str)
+L = TypeVar("L")
+U = TypeVar("U", bound=str)
+B = TypeVar("B", bound=str)
 
-class Expression(TypedDict, Generic[L,U,B]):
+class Expression(TypedDict, Generic[L, U, B]):
     pass
 
-class Compound(Expression[L,U,B]):
-    type: tLiteral['Compound']
-    body: Sequence[Expression[L,U,B]]
+class Compound(Expression[L, U, B]):
+    type: tLiteral["Compound"]
+    body: Sequence[Expression[L, U, B]]
+
 class Identifier(TypedDict):
-    type: tLiteral['Identifier']
+    type: tLiteral["Identifier"]
     name: str
 
-class Member(Expression[L,U,B]):
-    type: tLiteral['MemberExpression']
+class Member(Expression[L, U, B]):
+    type: tLiteral["MemberExpression"]
     computed: bool
-    object: Expression[L,U,B]
-    property: Expression[L,U,B]
+    object: Expression[L, U, B]
+    property: Expression[L, U, B]
 
-class Literal(Expression[L,U,B]):
-    type: tLiteral['Literal']
+class Literal(Expression[L, U, B]):
+    type: tLiteral["Literal"]
     value: L | float | str
     raw: str
 
-class Call(Expression[L,U,B]):
-    type: tLiteral['CallExpression']
-    arguments: Sequence[Expression[L,U,B]]
-    callee: Expression[L,U,B]
+class Call(Expression[L, U, B]):
+    type: tLiteral["CallExpression"]
+    arguments: Sequence[Expression[L, U, B]]
+    callee: Expression[L, U, B]
 
-class Unary(Expression[L,U,B]):
-    type: tLiteral['UnaryExpression']
+class Unary(Expression[L, U, B]):
+    type: tLiteral["UnaryExpression"]
     operator: U
-    argument: Expression[L,U,B]
+    argument: Expression[L, U, B]
 
-class Binary(Expression[L,U,B]):
-    type: tLiteral['BinaryExpression']
+class Binary(Expression[L, U, B]):
+    type: tLiteral["BinaryExpression"]
     operator: B
-    left: Expression[L,U,B]
-    right: Expression[L,U,B]
+    left: Expression[L, U, B]
+    right: Expression[L, U, B]
 
-class Condition(Expression[L,U,B]):
-    type: tLiteral['ConditionalExpression']
+class Condition(Expression[L, U, B]):
+    type: tLiteral["ConditionalExpression"]
     test: Expression
     consequent: Expression
     alternate: Expression
 
-class Ary(Expression[L,U,B]):
-    type: tLiteral['ArrayExpression']
+class Ary(Expression[L, U, B]):
+    type: tLiteral["ArrayExpression"]
     elements: Sequence[Expression]
 
 Config: TypeAlias = dict
@@ -70,10 +71,8 @@ class PreJsPy:
 
     def __init__(self) -> None: ...
     def parse(self, expr: str) -> Expression: ...
-    
     def getConfig(self) -> Config: ...
     def setConfig(self, config: Config) -> Config: ...
-
     def getConstants(self) -> dict[str, L]: ...
     def setConstants(self, d: dict[str, L]) -> dict[str, L]: ...
     def getUnaryOperators(self) -> list[U]: ...
@@ -84,6 +83,5 @@ class PreJsPy:
     def setTertiaryOperatorEnabled(self, e: bool) -> bool: ...
     def getIdentifiersEnabled(self) -> bool: ...
     def setIdentifiersEnabled(self, e: bool) -> bool: ...
-
 
 __all__ = ["PreJsPy"]
