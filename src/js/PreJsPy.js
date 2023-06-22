@@ -347,7 +347,7 @@
                             if (!alternate) {
                                 throwError('Expected expression', index);
                             }
-                            if (!self.getTertiaryOperatorEnabled()){
+                            if (!__tertiary){
                                 throwError('Unexpected tertiary operator',
                                     index);
                             }
@@ -371,9 +371,9 @@
                 // then, return that binary operation
                 gobbleBinaryOp = function () {
                     gobbleSpaces();
-                    var biop, to_check = expr.substr(index, self.getMaxBinaryOperatorsLength()), tc_len = to_check.length;
+                    var biop, to_check = expr.substr(index, __max_binop_len), tc_len = to_check.length;
                     while (tc_len > 0) {
-                        if (self.getBinaryOperators().hasOwnProperty(to_check)) {
+                        if (__binary_ops.hasOwnProperty(to_check)) {
                             index += tc_len;
                             return to_check;
                         }
@@ -458,10 +458,10 @@
                     } else if (ch === OBRACK_CODE) {
                         return gobbleArray();
                     } else {
-                        to_check = expr.substr(index, self.getMaxUnaryOperatorsLength());
+                        to_check = expr.substr(index, __max_unop_len);
                         tc_len = to_check.length;
                         while (tc_len > 0) {
-                            if (self.getUnaryOperators().indexOf(to_check) != -1) {
+                            if (__unary_ops.indexOf(to_check) != -1) {
                                 index += tc_len;
                                 return {
                                     type: UNARY_EXP,
@@ -607,14 +607,14 @@
                     }
                     identifier = expr.slice(start, index);
 
-                    if (self.getConstants().hasOwnProperty(identifier)) {
+                    if (__literals.hasOwnProperty(identifier)) {
                         return {
                             type: LITERAL,
-                            value: self.getConstants()[identifier],
+                            value: __literals[identifier],
                             raw: identifier
                         };
                     } else {
-                        if (!self.getIdentifiersEnabled()) {
+                        if (!__identifiers) {
                             throwError('Unknown literal "' + identifier + '"', index);
                         }
                         return {

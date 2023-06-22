@@ -11,11 +11,11 @@ export as namespace PreJsPy;
  * @tparam U is the type of unary expressions
  * @tparam B is the type of binary expressions
  */
-export type Expression<L, U extends string, B extends string> = 
+export type Expression<L, U extends string, B extends string> =
     Identifier |
     Literal<L> |
     Compound<L, U, B> |
-    Member<L, U, B> | 
+    Member<L, U, B> |
     Call<L, U, B> |
     Unary<L, U, B> |
     Binary<L, U, B> |
@@ -78,6 +78,8 @@ type Ary<L, U extends string, B extends string> = {
 }
 
 export class PreJsPy<L extends boolean | null, U extends string, B extends string> {
+    parse(source: string): Expression<L, U, B>
+
     getConstants(): Record<string, L>
     setConstants(constants: Record<string, L>): Record<string, L>
 
@@ -85,15 +87,13 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     getMaxUnaryOperatorsLength(): number;
     setUnaryOperators(operators: U[]): U[]
 
-    getBinaryOperators(): Record<B, number>; 
+    getBinaryOperators(): Record<B, number>;
     getMaxBinaryOperatorsLength(): number
     setBinaryOperators(operators: Record<B, number>): Record<B, number>
 
     getTertiaryOperatorEnabled(): boolean
-    setTertiaryOperatorEnabled(enabled: boolean): boolean;
+    setTertiaryOperatorEnabled(enabled: boolean): boolean
 
     getIdentifiersEnabled(): boolean
-    setIdentifiersEnabled(enabled: boolean): boolean;
-
-    parse(source: string): Expression<L, U, B>
+    setIdentifiersEnabled(enabled: boolean): boolean
 }
