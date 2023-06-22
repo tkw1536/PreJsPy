@@ -1,8 +1,11 @@
+// @ts-check
 "use strict";
 
 // (c) Tom Wiesing 2016-20, licensed under MIT license
 // This code is heavily based on the JavaScript version JSEP
 // The original code is (c) 2013 Stephen Oney, http://jsep.from.so/ and licensed under MIT
+
+///<reference path="PreJsPy.d.ts" />
 
 (function (root) {
 
@@ -40,6 +43,7 @@
      * @param index {number} Character index at which the error should be thrown.
      */
     var throwError = function (message, index) {
+        /** @type {PreJsPy.ParsingError} */
         var error = new Error(message + ' at character ' + index);
         error.index = index;
         error.description = message;
@@ -130,44 +134,163 @@
             (ch >= 48 && ch <= 57) || // 0...9
             ch >= 128; // non-ascii
         };
+    
+    /**
+     * Copies a dictionary for use in other functions.
+     * 
+     * @template {string|number|symbol} K
+     * @template V
+     * 
+     * @param {Record<K, V>} record
+     * @return {Record<K, V>}
+     */
+    var copyDict = function(record) {
+        if (typeof Object.assign === 'function') {
+            return Object.assign({}, record);
+        }
+    
+        /** @type {Partial<Record<K,V>>} */
+        var clone = {};
+        for (var key in record) {
+            if (Object.prototype.hasOwnProperty.call(record, key)) {
+                clone[key] = record[key];
+            }
+        }
+        return /** @type {Record<K,V>} */(clone)
+    }
+
+    /**
+     * Copies a list.
+     * 
+     * @template T
+     * 
+     * @param {Array<T>} ary
+     * @return {Array<T>}
+     */
+    var copyList = function(ary) {
+        return ary.slice(0);
+    }
 
     /**
      * Represents a single instance of the PreJSPy Parser.
      * @constructor
+     * 
+     * @template {boolean | null} L
+     * @template {string} U
+     * @template {string} B
      */
     var PreJsPy = function () {
         var self = this;
 
-
         // ==================
         // SETTERS && GETTERS
         // ==================
+        
+        /**
+         * Gets the configuration of this parser.
+         * @return {PreJsPy.Config<L,U,B>}
+         */
+        this.getConfig = function () {
+            return {
+                Operators: {
+                    Literals: copyDict(__config.Operators.Literals),
+                    Unary: copyList(__config.Operators.Unary),
+                    Binary: copyDict(__config.Operators.Binary),
+                },
+                Features: {
+                    Tertiary: __config.Features.Tertiary,
+                    Identifiers: __config.Features.Identifiers,
+                    Calls: __config.Features.Calls,
+                    Members: copyDict(__config.Features.Members),
+                    Literals: copyDict(__config.Features.Literals),
+                }   
+            }
+        }
+
+        /**
+         * Set the configuration of this parser.
+         * @param {PreJsPy.PartialConfig<L,U,B>} config
+         * @return {PreJsPy.Config<L,U,B>}
+         */
+        this.setConfig = function (config) {
+            if (typeof config.Operators === 'object') {
+                if (config.Operators.Literals) {
+                    __config.Operators.Literals = copyDict(config.Operators.Literals)
+                }
+                if (config.Operators.Unary) {
+                    __config.Operators.Unary = copyList(config.Operators.Unary)
+                    __max_unop_len = getMaxMemLen(__config.Operators.Unary)
+                }
+                if (config.Operators.Binary) {
+                    __config.Operators.Binary = copyDict(config.Operators.Binary)
+                    __max_binop_len = getMaxKeyLen(__config.Operators.Binary);
+                }
+            }
+            if (typeof config.Features === 'object') {
+                if (typeof config.Features.Tertiary === 'boolean') {
+                    __config.Features.Tertiary = config.Features.Tertiary
+                }
+                if (typeof config.Features.Identifiers === 'boolean') {
+                    __config.Features.Identifiers = config.Features.Identifiers
+                }
+                if (typeof config.Features.Calls === 'boolean') {
+                    __config.Features.Calls = config.Features.Calls
+                }
+                if (typeof config.Features.Calls === 'boolean') {
+                    __config.Features.Calls = config.Features.Calls
+                }
+
+                if (typeof config.Features.Members === 'object') {
+                    if (typeof config.Features.Members.Computed === 'boolean') {
+                        __config.Features.Members.Computed = config.Features.Members.Computed
+                    }
+                    if (typeof config.Features.Members.Static === 'boolean') {
+                        __config.Features.Members.Static = config.Features.Members.Static
+                    }
+                }
+                
+                if (typeof config.Features.Literals === 'object') {
+                    if (typeof config.Features.Literals.Array === 'boolean') {
+                        __config.Features.Literals.Array = config.Features.Literals.Array
+                    }
+                    if (typeof config.Features.Literals.Numeric === 'boolean') {
+                        __config.Features.Literals.Numeric = config.Features.Literals.Numeric
+                    }
+                    if (typeof config.Features.Literals.String === 'boolean') {
+                        __config.Features.Literals.String = config.Features.Literals.String
+                    }
+                }
+            }
+
+            return this.getConfig()
+        }
 
         /**
          * Gets the constants to be used by this parser.
          *
-         * @return {object}
+         * @return {PreJsPy.Config<L,U,B>["Operators"]["Literals"]}
          */
         this.getConstants = function () {
-            return __literals;
+            return this.getConfig().Operators.Literals;
         };
 
         /**
          * Gets the constants to be used by this parser.
+         * 
+         * @param {PreJsPy.Config<L,U,B>["Operators"]["Literals"]} dict
          *
-         * @return {object}
+         * @return {PreJsPy.Config<L,U,B>["Operators"]["Literals"]}
          */
         this.setConstants = function (dict) {
-            __literals = dict;
-            return __literals;
+            return this.setConfig({ Operators: { Literals:  dict }}).Operators.Literals;
         };
 
         /**
          * Gets the unary operators known to this parser.
-         * @returns {string[]}
+         * @returns {U[]}
          */
         this.getUnaryOperators = function () {
-            return __unary_ops;
+            return this.getConfig().Operators.Unary;
         };
 
         /**
@@ -180,19 +303,19 @@
 
         /**
          * Sets the unary operators known to this parser.
-         * @param ary {string[]} List of unary operators to set.
+         * @param ary {U[]} List of unary operators to set.
+         * @return {U[]}
          */
         this.setUnaryOperators = function (ary) {
-            __unary_ops = ary;
-            __max_unop_len = getMaxMemLen(__unary_ops);
+            return this.setConfig({Operators: {Unary: ary}}).Operators.Unary;
         };
 
         /**
          * Gets the binary operators known to this parser.
-         * @returns {object}
+         * @returns {Record<B,number>}
          */
         this.getBinaryOperators = function () {
-            return __binary_ops;
+            return this.getConfig().Operators.Binary;
         };
 
         /**
@@ -208,8 +331,7 @@
          * @param dict {object} Dictionary of binary operators to set.
          */
         this.setBinaryOperators = function (dict) {
-            __binary_ops = dict;
-            __max_binop_len = getMaxKeyLen(__binary_ops);
+            return this.setConfig({ Operators: { Binary: dict }}).Operators.Binary
         };
 
         /**
@@ -218,70 +340,53 @@
          * @returns {boolean}
          */
         this.getTertiaryOperatorEnabled = function () {
-            return __tertiary;
+            return this.getConfig().Features.Tertiary
         };
 
         /**
-         *
+         * Sets the tertiary operator
          * @param e {boolean} State of the tertiary operator to set.
-         */
-        this.setTertiaryOperatorEnabled = function (e) {
-            __tertiary = e;
-        };
-
-        /**
-         * Gets a boolean indicating if identifiers are enabled or not.
          * @returns {boolean}
          */
-        this.getIdentifiersEnabled = function () {
-            return __identifiers;
-        };
-
-        /**
-         * Enables or disables parsing of identifiers.
-         * @param e {boolean} State of identifiers to set.
-         */
-        this.setIdentifiersEnabled = function (b) {
-            __identifiers = b;
+        this.setTertiaryOperatorEnabled = function (e) {
+            return this.setConfig({ Features: { Tertiary: e }}).Features.Tertiary;
         };
 
         // =========
         // INIT CODE
         // =========
 
-        // Intitialise a set of literal constants for the parser.
-        var __literals;
-        this.setConstants({
-            'true': true,
-            'false': false,
-            'null': null
-        });
+        // setup the default configuration
 
-        // Set a list of unary operators
-        var __unary_ops;
-        var __max_unop_len;
-        this.setUnaryOperators(['-', '!', '~', '+']);
+        /** @type {PreJsPy.Config<L,U,B>} */
+        var __config = PreJsPy.defaultConfig();
+        this.setConfig(__config);
 
-        // Set a list of binary operators and their preferences.
-        // See http://en.wikipedia.org/wiki/Order_of_operations#Programming_language
-        var __binary_ops;
-        var __max_binop_len;
-        this.setBinaryOperators({
-            '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5,
-            '==': 6, '!=': 6, '===': 6, '!==': 6,
-            '<': 7, '>': 7, '<=': 7, '>=': 7,
-            '<<': 8, '>>': 8, '>>>': 8,
-            '+': 9, '-': 9,
-            '*': 10, '/': 10, '%': 10
-        });
+        // Set maximum lengths
+        var __max_unop_len = 0;
+        var __max_binop_len = 0;
 
-        // enable the tertiary operator
-        var __tertiary;
-        this.setTertiaryOperatorEnabled(true);
-
-        // enable identifiers
-        var __identifiers;
-        this.setIdentifiersEnabled(true);
+        // Configure a reasonable default config
+        this.setConfig(
+            /** @type {any} */({
+                Operators: {
+                    Literals: {
+                        'true': true,
+                        'false': false,
+                        'null': null,
+                    },
+                    Unary: ['-', '!', '~', '+'],
+                    Binary: {
+                        '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5,
+                        '==': 6, '!=': 6, '===': 6, '!==': 6,
+                        '<': 7, '>': 7, '<=': 7, '>=': 7,
+                        '<<': 8, '>>': 8, '>>>': 8,
+                        '+': 9, '-': 9,
+                        '*': 10, '/': 10, '%': 10
+                    },
+                },
+            })
+        )
 
         // ============
         // MISC HELPERS
@@ -347,7 +452,7 @@
                             if (!alternate) {
                                 throwError('Expected expression', index);
                             }
-                            if (!__tertiary){
+                            if (!__config.Features.Tertiary){
                                 throwError('Unexpected tertiary operator',
                                     index);
                             }
@@ -365,15 +470,20 @@
                     }
                 },
 
-                // Search for the operation portion of the string (e.g. `+`, `===`)
-                // Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
-                // and move down from 3 to 2 to 1 character until a matching binary operation is found
-                // then, return that binary operation
+
+                /**
+                 * Search for the operation portion of the string (e.g. `+`, `===`)
+                 * Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
+                 * and move down from 3 to 2 to 1 character until a matching binary operation is found
+                 * then, return that binary operation.
+                 * 
+                 * @returns {string|false}
+                 */
                 gobbleBinaryOp = function () {
                     gobbleSpaces();
-                    var biop, to_check = expr.substr(index, __max_binop_len), tc_len = to_check.length;
+                    var to_check = expr.substr(index, __max_binop_len), tc_len = to_check.length;
                     while (tc_len > 0) {
-                        if (__binary_ops.hasOwnProperty(to_check)) {
+                        if (__config.Operators.Binary.hasOwnProperty(to_check)) {
                             index += tc_len;
                             return to_check;
                         }
@@ -385,7 +495,7 @@
                 // This function is responsible for gobbling an individual expression,
                 // e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
                 gobbleBinaryExpression = function () {
-                    var ch_i, node, biop, prec, stack, biop_info, left, right, i;
+                    var node, /** @type {string|false} */biop, prec, stack, biop_info, left, right, i;
 
                     // First, try to get the leftmost thing
                     // Then, check to see if there's a binary operator operating on that leftmost thing
@@ -421,7 +531,7 @@
                             right = stack.pop();
                             biop = stack.pop().value;
                             left = stack.pop();
-                            node = createBinaryExpression(biop, left, right);
+                            node = createBinaryExpression(/** @type{string} */(biop), left, right);
                             stack.push(node);
                         }
 
@@ -461,7 +571,7 @@
                         to_check = expr.substr(index, __max_unop_len);
                         tc_len = to_check.length;
                         while (tc_len > 0) {
-                            if (__unary_ops.indexOf(to_check) != -1) {
+                            if (__config.Operators.Unary.indexOf(/** @type U */(to_check)) != -1) {
                                 index += tc_len;
                                 return {
                                     type: UNARY_EXP,
@@ -521,6 +631,10 @@
                         throwError('Unexpected period', index);
                     }
 
+                    if (!__config.Features.Literals.Numeric) {
+                        throwError('Unexpected numeric literal', index - number.length)
+                    }
+
                     return {
                         type: LITERAL,
                         value: parseFloat(number),
@@ -531,7 +645,7 @@
                 // Parses a string literal, staring with single or double quotes with basic support for escape codes
                 // e.g. `"hello world"`, `'this is\nJSEP'`
                 gobbleStringLiteral = function () {
-                    var str = '', quote = exprI(index++), closed = false, ch;
+                    var str = '', quote = exprI(index++), closed = false, ch, index_start = index;
 
                     while (index < length) {
                         ch = exprI(index++);
@@ -577,10 +691,14 @@
                         throwError('Unclosed quote after "' + str + '"', index);
                     }
 
+                    if (!__config.Features.Literals.String) {
+                        throwError('Unexpected string literal', index_start);
+                    }
+
                     return {
                         type: LITERAL,
                         value: str,
-                        raw: quote + str + quote
+                        raw: quote + str + quote // TODO: Does this need fixing
                     };
                 },
 
@@ -607,14 +725,14 @@
                     }
                     identifier = expr.slice(start, index);
 
-                    if (__literals.hasOwnProperty(identifier)) {
+                    if (__config.Operators.Literals.hasOwnProperty(identifier)) {
                         return {
                             type: LITERAL,
-                            value: __literals[identifier],
+                            value: __config.Operators.Literals[identifier],
                             raw: identifier
                         };
                     } else {
-                        if (!__identifiers) {
+                        if (!__config.Features.Identifiers) {
                             throwError('Unknown literal "' + identifier + '"', index);
                         }
                         return {
@@ -668,6 +786,9 @@
                     while (ch_i === PERIOD_CODE || ch_i === OBRACK_CODE || ch_i === OPAREN_CODE) {
                         index++;
                         if (ch_i === PERIOD_CODE) {
+                            if (!__config.Features.Members.Static) {
+                                throwError('Unexpected static MemberExpression', index)
+                            }
                             gobbleSpaces();
                             node = {
                                 type: MEMBER_EXP,
@@ -676,6 +797,9 @@
                                 property: gobbleIdentifier()
                             };
                         } else if (ch_i === OBRACK_CODE) {
+                            if (!__config.Features.Members.Computed) {
+                                throwError('Unexpected dynamic MemberExpression', index)
+                            }
                             node = {
                                 type: MEMBER_EXP,
                                 computed: true,
@@ -689,6 +813,9 @@
                             }
                             index++;
                         } else if (ch_i === OPAREN_CODE) {
+                            if (!__config.Features.Calls) {
+                                throwError('Unexpected function call', index);
+                            }
                             // A function call is being made; gobble all the arguments
                             node = {
                                 type: CALL_EXP,
@@ -723,6 +850,10 @@
                 // This function assumes that it needs to gobble the opening bracket
                 // and then tries to gobble the expressions as arguments.
                 gobbleArray = function () {
+                    if (!__config.Features.Literals.Array) {
+                        throwError('Unexpected array literal', index)
+                    }
+
                     index++;
                     return {
                         type: ARRAY_EXP,
@@ -760,6 +891,51 @@
                     body: nodes
                 };
             }
+        };
+    };
+
+    /**
+     * Creates a new default configuration
+     * 
+     * @template {boolean | null} L
+     * @template {string} U
+     * @template {string} B
+     * 
+     * @returns {PreJsPy.Config<L,U,B>}
+     */
+    PreJsPy.defaultConfig = function () {
+        return {
+            Operators: {
+                Literals: /** @type any */({
+                    'true': true,
+                    'false': false,
+                    'null': null,
+                }),
+                Unary: /** @type any */(['-', '!', '~', '+']),
+                Binary: /** @type any */({
+                    '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5,
+                    '==': 6, '!=': 6, '===': 6, '!==': 6,
+                    '<': 7, '>': 7, '<=': 7, '>=': 7,
+                    '<<': 8, '>>': 8, '>>>': 8,
+                    '+': 9, '-': 9,
+                    '*': 10, '/': 10, '%': 10
+                }),
+            },
+        
+            Features: {
+                Tertiary: true,
+                Identifiers: true,
+                Calls: true,
+                Members: {
+                    Static: true,
+                    Computed: true,
+                },
+                Literals: {
+                    Numeric: true,
+                    String: true,
+                    Array: true,
+                }
+            }   
         };
     };
 

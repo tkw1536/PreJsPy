@@ -7,9 +7,9 @@ export as namespace PreJsPy;
 
 /**
  * An Expression represents a parsed tree for PreJSPy. 
- * @tparam L is the type of literals
- * @tparam U is the type of unary expressions
- * @tparam B is the type of binary expressions
+ * @template L is the type of literals
+ * @template U is the type of unary expressions
+ * @template B is the type of binary expressions
  */
 export type Expression<L, U extends string, B extends string> =
     Identifier |
@@ -21,6 +21,11 @@ export type Expression<L, U extends string, B extends string> =
     Binary<L, U, B> |
     Condition<L, U, B> |
     Ary<L, U, B>;
+
+export type ParsingError = Error & {
+    index?: number
+    description?: string
+}
 
 type Compound<L, U extends string, B extends string> = {
     type: "Compound";
@@ -77,23 +82,78 @@ type Ary<L, U extends string, B extends string> = {
     elements: Expression<L, U, B>[];
 }
 
+
+/** Config represents a configuration of the parser */
+type Config<L extends boolean | null, U extends string, B extends string> = {
+    Operators: {
+        Literals: Record<string, L>,
+        Unary: U[],
+        Binary: Record<B, number>,
+    }
+
+    Features: {
+        Tertiary: boolean;
+        Identifiers: boolean;
+        Calls: boolean;
+        Members: { 
+            Static: boolean; // TODO
+            Computed: boolean; // TODO
+        };
+        Literals: {
+            Numeric: boolean;
+            String: boolean;
+            Array: boolean;
+        }
+    }
+}
+
+type PartialConfig<L extends boolean | null, U extends string, B extends string> = Partial<{
+    Operators: Partial<Config<L,U,B>["Operators"]>
+    Features: {
+        Tertiary?: boolean;
+        Identifiers?: boolean;
+        Calls?: boolean;
+        Members?: Partial<{
+            Static: boolean;
+            Computed: boolean;
+        }>
+        Literals?: Partial<{
+            Numeric: boolean;
+            String: boolean;
+            Array: boolean;
+        }>
+    }
+}>
+
+export function defaultConfig<L extends boolean | null, U extends string, B extends string>(): Config<L, U, B>;
+
 export class PreJsPy<L extends boolean | null, U extends string, B extends string> {
     parse(source: string): Expression<L, U, B>
 
-    getConstants(): Record<string, L>
-    setConstants(constants: Record<string, L>): Record<string, L>
+    getConfig(): Config<L,U,B>
+    setConfig(config: PartialConfig<L,U,B>): Config<L,U,B>
 
+    /** @deprecated */
+    getConstants(): PreJsPy.Config<L,U,B>["Operators"]["Literals"]
+    /** @deprecated */
+    setConstants(constants: PreJsPy.Config<L,U,B>["Operators"]["Literals"]): PreJsPy.Config<L,U,B>["Operators"]["Literals"]
+
+    /** @deprecated */
     getUnaryOperators(): U[]
+    /** @deprecated */
     getMaxUnaryOperatorsLength(): number;
+    /** @deprecated */
     setUnaryOperators(operators: U[]): U[]
 
+    /** @deprecated */
     getBinaryOperators(): Record<B, number>;
+    /** @deprecated */
     getMaxBinaryOperatorsLength(): number
+    /** @deprecated */
     setBinaryOperators(operators: Record<B, number>): Record<B, number>
 
+    /** @deprecated */
     getTertiaryOperatorEnabled(): boolean
+    /** @deprecated */
     setTertiaryOperatorEnabled(enabled: boolean): boolean
-
-    getIdentifiersEnabled(): boolean
-    setIdentifiersEnabled(enabled: boolean): boolean
 }
