@@ -152,57 +152,60 @@ class PreJsPy(object):
         :param config: (Possibly partial) configuration to use.
         """
 
-        if "Operators" in config:
-            if "Literals" in config["Operators"]:
-                self.__config["Operators"]["Literals"] = PreJsPy.__copyDict(
-                    config["Operators"]["Literals"]
-                )
-            if "Unary" in config["Operators"]:
-                self.__config["Operators"]["Unary"] = PreJsPy.__copyDict(
-                    config["Operators"]["Unary"]
-                )
-                self.__max_uops_len = PreJsPy.__getMaxMemLen(
-                    self.__config["Operators"]["Unary"]
-                )
-            if "Binary" in config["Operators"]:
-                self.__config["Operators"]["Binary"] = PreJsPy.__copyDict(
-                    config["Operators"]["Binary"]
-                )
-                self.__max_binop_len = PreJsPy.__getMaxKeyLen(
-                    self.__config["Operators"]["Binary"]
-                )
-        if "Features" in config:
-            if "Tertiary" in config["Features"]:
-                self.__config["Features"]["Tertiary"] = config["Features"]["Tertiary"]
-            if "Identifiers" in config["Features"]:
-                self.__config["Features"]["Identifiers"] = config["Features"][
-                    "Identifiers"
-                ]
-            if "Calls" in config["Features"]:
-                self.__config["Features"]["Calls"] = config["Features"]["Calls"]
+        if config:
+            if "Operators" in config:
+                if "Literals" in config["Operators"]:
+                    self.__config["Operators"]["Literals"] = PreJsPy.__copyDict(
+                        config["Operators"]["Literals"]
+                    )
+                if "Unary" in config["Operators"]:
+                    self.__config["Operators"]["Unary"] = PreJsPy.__copyDict(
+                        config["Operators"]["Unary"]
+                    )
+                    self.__max_uops_len = PreJsPy.__getMaxMemLen(
+                        self.__config["Operators"]["Unary"]
+                    )
+                if "Binary" in config["Operators"]:
+                    self.__config["Operators"]["Binary"] = PreJsPy.__copyDict(
+                        config["Operators"]["Binary"]
+                    )
+                    self.__max_binop_len = PreJsPy.__getMaxKeyLen(
+                        self.__config["Operators"]["Binary"]
+                    )
+            if "Features" in config:
+                if "Tertiary" in config["Features"]:
+                    self.__config["Features"]["Tertiary"] = config["Features"][
+                        "Tertiary"
+                    ]
+                if "Identifiers" in config["Features"]:
+                    self.__config["Features"]["Identifiers"] = config["Features"][
+                        "Identifiers"
+                    ]
+                if "Calls" in config["Features"]:
+                    self.__config["Features"]["Calls"] = config["Features"]["Calls"]
 
-            if "Members" in config["Features"]:
-                if "Computed" in config["Features"]["Members"]:
-                    self.__config["Features"]["Members"]["Computed"] = config[
-                        "Features"
-                    ]["Members"]["Computed"]
-                if "Static" in config["Features"]["Members"]:
-                    self.__config["Features"]["Members"]["Static"] = config["Features"][
-                        "Members"
-                    ]["Static"]
-            if "Literals" in config["Features"]:
-                if "Array" in config["Features"]["Literals"]:
-                    self.__config["Features"]["Literals"]["Array"] = config["Features"][
-                        "Literals"
-                    ]["Array"]
-                if "Numeric" in config["Features"]["Literals"]:
-                    self.__config["Features"]["Literals"]["Numeric"] = config[
-                        "Features"
-                    ]["Literals"]["Numeric"]
-                if "String" in config["Features"]["Literals"]:
-                    self.__config["Features"]["Literals"]["String"] = config[
-                        "Features"
-                    ]["Literals"]["String"]
+                if "Members" in config["Features"]:
+                    if "Computed" in config["Features"]["Members"]:
+                        self.__config["Features"]["Members"]["Computed"] = config[
+                            "Features"
+                        ]["Members"]["Computed"]
+                    if "Static" in config["Features"]["Members"]:
+                        self.__config["Features"]["Members"]["Static"] = config[
+                            "Features"
+                        ]["Members"]["Static"]
+                if "Literals" in config["Features"]:
+                    if "Array" in config["Features"]["Literals"]:
+                        self.__config["Features"]["Literals"]["Array"] = config[
+                            "Features"
+                        ]["Literals"]["Array"]
+                    if "Numeric" in config["Features"]["Literals"]:
+                        self.__config["Features"]["Literals"]["Numeric"] = config[
+                            "Features"
+                        ]["Literals"]["Numeric"]
+                    if "String" in config["Features"]["Literals"]:
+                        self.__config["Features"]["Literals"]["String"] = config[
+                            "Features"
+                        ]["Literals"]["String"]
 
         return self.getConfig()
 

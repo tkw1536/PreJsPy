@@ -209,51 +209,53 @@
 
         /**
          * Set the configuration of this parser.
-         * @param {PreJsPy.PartialConfig<L,U,B>} config
+         * @param {PreJsPy.PartialConfig<L,U,B>?} config
          * @return {PreJsPy.Config<L,U,B>}
          */
         this.setConfig = function (config) {
-            if (typeof config.Operators === 'object') {
-                if (config.Operators.Literals) {
-                    __config.Operators.Literals = copyDict(config.Operators.Literals)
-                }
-                if (config.Operators.Unary) {
-                    __config.Operators.Unary = copyList(config.Operators.Unary)
-                    __max_unop_len = getMaxMemLen(__config.Operators.Unary)
-                }
-                if (config.Operators.Binary) {
-                    __config.Operators.Binary = copyDict(config.Operators.Binary)
-                    __max_binop_len = getMaxKeyLen(__config.Operators.Binary);
-                }
-            }
-            if (typeof config.Features === 'object') {
-                if (typeof config.Features.Tertiary === 'boolean') {
-                    __config.Features.Tertiary = config.Features.Tertiary
-                }
-                if (typeof config.Features.Identifiers === 'boolean') {
-                    __config.Features.Identifiers = config.Features.Identifiers
-                }
-                if (typeof config.Features.Calls === 'boolean') {
-                    __config.Features.Calls = config.Features.Calls
-                }
-                if (typeof config.Features.Members === 'object') {
-                    if (typeof config.Features.Members.Computed === 'boolean') {
-                        __config.Features.Members.Computed = config.Features.Members.Computed
+            if (typeof config === 'object') {
+                if (typeof config.Operators === 'object') {
+                    if (config.Operators.Literals) {
+                        __config.Operators.Literals = copyDict(config.Operators.Literals)
                     }
-                    if (typeof config.Features.Members.Static === 'boolean') {
-                        __config.Features.Members.Static = config.Features.Members.Static
+                    if (config.Operators.Unary) {
+                        __config.Operators.Unary = copyList(config.Operators.Unary)
+                        __max_unop_len = getMaxMemLen(__config.Operators.Unary)
+                    }
+                    if (config.Operators.Binary) {
+                        __config.Operators.Binary = copyDict(config.Operators.Binary)
+                        __max_binop_len = getMaxKeyLen(__config.Operators.Binary);
                     }
                 }
-                
-                if (typeof config.Features.Literals === 'object') {
-                    if (typeof config.Features.Literals.Array === 'boolean') {
-                        __config.Features.Literals.Array = config.Features.Literals.Array
+                if (typeof config.Features === 'object') {
+                    if (typeof config.Features.Tertiary === 'boolean') {
+                        __config.Features.Tertiary = config.Features.Tertiary
                     }
-                    if (typeof config.Features.Literals.Numeric === 'boolean') {
-                        __config.Features.Literals.Numeric = config.Features.Literals.Numeric
+                    if (typeof config.Features.Identifiers === 'boolean') {
+                        __config.Features.Identifiers = config.Features.Identifiers
                     }
-                    if (typeof config.Features.Literals.String === 'boolean') {
-                        __config.Features.Literals.String = config.Features.Literals.String
+                    if (typeof config.Features.Calls === 'boolean') {
+                        __config.Features.Calls = config.Features.Calls
+                    }
+                    if (typeof config.Features.Members === 'object') {
+                        if (typeof config.Features.Members.Computed === 'boolean') {
+                            __config.Features.Members.Computed = config.Features.Members.Computed
+                        }
+                        if (typeof config.Features.Members.Static === 'boolean') {
+                            __config.Features.Members.Static = config.Features.Members.Static
+                        }
+                    }
+                    
+                    if (typeof config.Features.Literals === 'object') {
+                        if (typeof config.Features.Literals.Array === 'boolean') {
+                            __config.Features.Literals.Array = config.Features.Literals.Array
+                        }
+                        if (typeof config.Features.Literals.Numeric === 'boolean') {
+                            __config.Features.Literals.Numeric = config.Features.Literals.Numeric
+                        }
+                        if (typeof config.Features.Literals.String === 'boolean') {
+                            __config.Features.Literals.String = config.Features.Literals.String
+                        }
                     }
                 }
             }
