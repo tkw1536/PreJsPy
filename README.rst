@@ -46,16 +46,11 @@ Grammar Features
    * Constants
       * such as ```true```, ```false``` and ```null```
       * configurable: Arbitrary constants can be added 
-      * Example: `{"raw": "true", "value": true, "type": "Literal"}`
-      * API: Use `setConstants` / `getConstants` with a map from strings to desired constants
    * Identifiers
       * may contain  $,\_ or alphanumeric characters but may not start with a number
       * for example `foo`
-      * Example: `{"name": "foo", "type": "Identifier"}`
-      * API: Use `setIdentifiersEnabled` / `getIdentifiersEnabled` with a boolean to enable or disable them
     * Acessors
-      * can be dynamic or not `foo.bar`, `foo['bar']`
-      * Example: `{"object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression", "computed": false, "property": {"name": "world", "type": "Identifier"}}`
+      * can be static or computed `foo.bar`, `foo['bar']`
 * Various types of literals
    * Numeric Literals (```42.001```)
       * decimal notation (```-42```)
@@ -87,22 +82,101 @@ API
 The API in JavaScript and python are almost identical. The only differences come from the features of the languages themselves.
 
 .. code:: javascript
+  var PreJsPy = require('pre-js-py').PreJsPy
 
   var parser = new PreJsPy(); // creates a new parser
+  var ast = parser.parse(s) // parses a string into a AST.
 
-  parser.getConfig() // returns a configuration object of the parser
+  var config = parser.getConfig() // returns a configuration object of the parser.
   parser.setConfig(config) // sets configuration of the parser. May be partial.
 
-  parser.parse(s) // parses a string into a AST
+  PreJsPy.getDefaultConfig() // returns the default configuration for new parsers.
 
 .. code:: python
 
-  parser = PreJsPy() # creates a new parser
+  from PreJsPy import PreJsPy
 
-  parser.getConfig() # returns a configuration object of the parser
+  parser = PreJsPy() # creates a new parser.
+  ast = parser.parse(s) # parses a string into a AST,
+
+  config = parser.getConfig() # returns a configuration object of the parser.
   parser.setConfig(config) # sets configuration of the parser. May be partial.
+  
+  PreJsPy.getDefaultConfig() # returns the default configuration for new parsers
 
-  parser.parse(s) # parses a string into a AST
+
+Configuration passed to  and from returned from `getConfig` configures the desired features of the parser.
+A configuration passed to `setConfig` may be partial, in which case the previously configured settings are left intance.
+A configuration returned from `getConfig` is always complete.
+
+The default configuration (which explanations) is found below:
+
+.. code:: json
+   {
+   // Operators supported by the parser.
+   // These can be configured individually.
+    "Operators": {
+        // The set of literals (i.e. constants) recognized by the parser.
+        // Note that these cannot be used as identifiers.
+        "Literals": { "true": true, "false": false, "null": null },
+
+        // The set of unary operators recognized by the parser.
+        // These all bind more tightly than binary operators.
+        // For example, "- a || b" parses as "(-a) || b".
+        "Unary": [ "-", "!", "~", "+" ],
+
+        // A set of binary operators mapped to their precedence.
+        // Higher precedence means higher binding power.
+        // For example "a || b == c", parses as "(a || b) == c".
+        "Binary": {
+            "||": 1,
+            "&&": 2,
+            "|": 3,
+            "^": 4,
+            "&": 5,
+            "==": 6,
+            "!=": 6,
+            "===": 6,
+            "!==": 6,
+            "<": 7,
+            ">": 7,
+            "<=": 7,
+            ">=": 7,
+            "<<": 8,
+            ">>": 8,
+            ">>>": 8,
+            "+": 9,
+            "-": 9,
+            "*": 10,
+            "/": 10,
+            "%": 10
+        }
+    },
+
+    // Enable and disable specific features.
+    "Features": {
+         // The tertiary operators "a ? b : c".
+        "Tertiary": true,
+        // Non-constant, non-quoted identifiers in the code.
+        "Identifiers": true,
+        // Function calls.
+        "Calls": true,
+        "Members": {
+            // Static Member Accesses like "car.wheels"
+            "Static": true,
+            // Computed Member Accesses like "something[i + 1]"
+            "Computed": true
+        },
+        "Literals": {
+            // Numeric literals like "1.2"
+            "Numeric": true,
+            // String literals, enclosed in double quotes.
+            "String": true,
+            // Array literals, like "[1,2,3]"
+            "Array": true
+        }
+    }
+}
 
 Install
 =======
