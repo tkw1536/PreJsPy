@@ -1,15 +1,18 @@
 [
   {
+    "config": {},
     "input": "true",
     "output": {"raw": "true", "value": true, "type": "Literal"},
     "message": "constant true"
   },
   {
+    "config": {},
     "input": "false",
     "output": {"raw": "false", "value": false, "type": "Literal"},
     "message": "constant false"
   },
   {
+    "config": {},
     "input": "null",
     "output": {"raw": "null", "value": null, "type": "Literal"},
     "message": "constant null"

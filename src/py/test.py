@@ -56,12 +56,15 @@ class TestPreJsPy(unittest.TestCase):
 
         # and run all the test cases.
         for t in tests:
-            self.run_single_case(p, t["input"], t["output"], t["message"])
+            self.run_single_case(p, t["config"], t["input"], t["output"], t["message"])
 
-    def run_single_case(self, instance, inp, out, message):
+    def run_single_case(self, instance, config, inp, out, message):
         """ Runs a single test case.
         :param instance: PreJsPy instance to test on.
         :type instance: PreJsPy.PreJsPy
+
+        :param config: Configuration object to apply
+        :type config: dict
 
         :param inp: Input to parse.
         :type inp: str
@@ -72,6 +75,9 @@ class TestPreJsPy(unittest.TestCase):
         :param message: Message of test case.
         :type message: str
         """
+
+        instance.setConfig(PreJsPy.PreJsPy.getDefaultConfig())
+        instance.setConfig(config)
 
         self.assertEqual(instance.parse(inp), out, msg=message)
 

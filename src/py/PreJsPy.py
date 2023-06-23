@@ -283,7 +283,7 @@ class PreJsPy(object):
     def __init__(self):
         """Creates a new PreJSPyParser instance."""
 
-        self.__config = self.__class__.defaultConfig()
+        self.__config = self.__class__.getDefaultConfig()
         self.setConfig(self.__config)
 
     # ============
@@ -841,7 +841,7 @@ class PreJsPy(object):
             return {"type": PreJsPy.COMPOUND, "body": nodes}
 
     @staticmethod
-    def defaultConfig():
+    def getDefaultConfig():
         """Returns the default configuration"""
         return {
             "Operators": {

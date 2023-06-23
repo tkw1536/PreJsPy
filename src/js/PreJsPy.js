@@ -361,7 +361,7 @@
         // setup the default configuration
 
         /** @type {PreJsPy.Config<L,U,B>} */
-        var __config = PreJsPy.defaultConfig();
+        var __config = PreJsPy.getDefaultConfig();
         this.setConfig(__config);
 
         // Set maximum lengths
@@ -905,7 +905,7 @@
      * 
      * @returns {PreJsPy.Config<L,U,B>}
      */
-    PreJsPy.defaultConfig = function () {
+    PreJsPy.getDefaultConfig = function () {
         return {
             Operators: {
                 Literals: /** @type any */({

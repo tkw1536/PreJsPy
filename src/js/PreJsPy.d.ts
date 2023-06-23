@@ -125,7 +125,6 @@ type PartialConfig<L extends boolean | null, U extends string, B extends string>
     }
 }>
 
-export function defaultConfig<L extends boolean | null, U extends string, B extends string>(): Config<L, U, B>;
 
 export class PreJsPy<L extends boolean | null, U extends string, B extends string> {
     parse(source: string): Expression<L, U, B>
@@ -137,6 +136,8 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     getConstants(): PreJsPy.Config<L,U,B>["Operators"]["Literals"]
     /** @deprecated */
     setConstants(constants: PreJsPy.Config<L,U,B>["Operators"]["Literals"]): PreJsPy.Config<L,U,B>["Operators"]["Literals"]
+
+    static getDefaultConfig<L extends boolean | null, U extends string, B extends string>(): Config<L, U, B>;
 
     /** @deprecated */
     getUnaryOperators(): U[]

@@ -22,7 +22,7 @@ function load_file(fn){
 
     // and run all the test cases.
     tests.forEach(function(t){
-        run_single_case(p, t["input"], t["output"], t["message"]);
+        run_single_case(p, t["config"], t["input"], t["output"], t["message"]);
     });
 
     console.log(".\n");
@@ -32,7 +32,11 @@ function load_file(fn){
  * Runs a single test case.
  *
  * @param instance PreJsPy instance to test on.
- * @type instance
+ * @type instance string
+ * 
+ * @param config Configuration to apply to PreJsPy instance
+ * @param config any
+ * 
  *
  * @param inp Input to parse.
  * @type param string
@@ -43,7 +47,9 @@ function load_file(fn){
  * @param message Message of test case.
  * @type message string
  */
-function run_single_case(instance, inp, out, message){
+function run_single_case(instance, config, inp, out, message){
+    instance.setConfig(parse.PreJsPy.getDefaultConfig()) // reset the config to default
+    instance.setConfig(config) // set config
     assert.deepEqual(instance.parse(inp), out, message);
 }
 
