@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name="pre_js_py",
-    version="1.3.0",
+    version="1.3.0+rc1",
 
     url="https://github.com/tkw1536/PreJsPy",
     author="Tom Wiesing",
@@ -17,7 +17,7 @@ setup(
     description=(
         "Highly configurable precedence-based parser written in both Python and JavaScript"
     ),
-    long_description=read("../../README.rst"),
+    long_description=read("README.rst"),
     long_description_content_type="text/x-rst",
     license="MIT",
     classifiers=[
