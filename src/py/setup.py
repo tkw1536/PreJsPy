@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name="pre_js_py",
-    version="1.3.0+rc1",
+    version="2.0.0+rc1",
 
     url="https://github.com/tkw1536/PreJsPy",
     author="Tom Wiesing",
