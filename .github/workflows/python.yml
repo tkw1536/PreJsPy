@@ -19,4 +19,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - run: make python
+      - run: make pycheck
