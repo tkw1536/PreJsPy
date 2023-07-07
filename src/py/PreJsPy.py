@@ -395,17 +395,17 @@ class PreJsPy(Generic[L, U, B]):
     __length: int = 0
     __expr: str = ""
 
-    def __exprI(self, i: int) -> str:
-        if len(self.__expr) < i:
+    def __exprI(self) -> str:
+        if self.__index >= self.__length:
             return ""
         
-        return self.__expr[i]
+        return self.__expr[self.__index]
 
-    def __exprICode(self, i: int) -> int:
-        if len(self.__expr) < i:
+    def __exprICode(self) -> int:
+        if self.__index >= self.__length:
             return -1
 
-        return ord(self.__expr[i])
+        return ord(self.__expr[self.__index])
 
     def parse(self, expr: str) -> 'Expression[L, U, B]':
         """Parses an expression expr into a parse tree.
@@ -432,7 +432,7 @@ class PreJsPy(Generic[L, U, B]):
         node = None
 
         while self.__index < self.__length:
-            ch_i = self.__exprICode(self.__index)
+            ch_i = self.__exprICode()
 
             # Expressions can be separated by semicolons, commas, or just inferred without any separators
             if ch_i == PreJsPy.SEMCOL_CODE or ch_i == PreJsPy.COMMA_CODE:
@@ -446,7 +446,7 @@ class PreJsPy(Generic[L, U, B]):
 
             # didn't find an expression => something went wrong
             elif self.__index < self.__length:
-                self.__throw_error('Unexpected "' + (self.__exprI(self.__index)) + '"')
+                self.__throw_error('Unexpected "' + (self.__exprI()) + '"')
 
         # If there is only one expression, return it as is
         if len(nodes) == 1:
@@ -456,10 +456,10 @@ class PreJsPy(Generic[L, U, B]):
 
     def __gobbleSpaces(self) -> None:
         """Push `index` up to the next non-space character"""
-        ch = self.__exprICode(self.__index)
+        ch = self.__exprICode()
         while ch == PreJsPy.SPACE_CODE or ch == PreJsPy.TAB_CODE:
             self.__index += 1
-            ch = self.__exprICode(self.__index)
+            ch = self.__exprICode()
 
     def __gobbleExpression(self) -> Optional['Expression[L,U,B]']:
         """Main parsing function to parse any kind of expression"""
@@ -475,7 +475,7 @@ class PreJsPy(Generic[L, U, B]):
         self.__gobbleSpaces()
 
         # not a ternary expression => return immediately
-        if self.__exprICode(self.__index) != PreJsPy.QUMARK_CODE or test is None:
+        if self.__exprICode() != PreJsPy.QUMARK_CODE or test is None:
             return test
 
         if not self.__config["Features"]["Tertiary"]:
@@ -490,7 +490,7 @@ class PreJsPy(Generic[L, U, B]):
         self.__gobbleSpaces()
 
         # need a ':' for the second part of the alternate
-        if self.__exprICode(self.__index) != PreJsPy.COLON_CODE:
+        if self.__exprICode() != PreJsPy.COLON_CODE:
             self.__throw_error("Expected :")
 
         self.__index += 1
@@ -563,7 +563,7 @@ class PreJsPy(Generic[L, U, B]):
 
             # gobble the next token in the tree
             node = self.__gobbleToken()
-            if not node:
+            if node is None:
                 self.__throw_error("Expected expression after " + biop)
             exprs.append(node)
 
@@ -588,7 +588,7 @@ class PreJsPy(Generic[L, U, B]):
         tc_len = None
 
         self.__gobbleSpaces()
-        ch = self.__exprICode(self.__index)
+        ch = self.__exprICode()
 
         if self.__isDecimalDigit(ch) or ch == PreJsPy.PERIOD_CODE:
             # Char code 46 is a dot `.` which can start off a numeric literal
@@ -629,46 +629,50 @@ class PreJsPy(Generic[L, U, B]):
         ch = None
         chCode = None
 
-        while self.__isDecimalDigit(self.__exprICode(self.__index)):
-            number += self.__exprI(self.__index)
+        while self.__isDecimalDigit(self.__exprICode()):
+            number += self.__exprI()
             self.__index += 1
 
-        if self.__exprICode(self.__index) == PreJsPy.PERIOD_CODE:
+        if self.__exprICode() == PreJsPy.PERIOD_CODE:
             # can start with a decimal marker
-            number += self.__exprI(self.__index)
+            number += self.__exprI()
             self.__index += 1
 
-            while self.__isDecimalDigit(self.__exprICode(self.__index)):
-                number += self.__exprI(self.__index)
+            while self.__isDecimalDigit(self.__exprICode()):
+                number += self.__exprI()
                 self.__index += 1
 
-        ch = self.__exprI(self.__index)
+        ch = self.__exprI()
         if ch == "e" or ch == "E":  # exponent marker
-            number += self.__exprI(self.__index)
+            number += self.__exprI()
             self.__index += 1
 
-            ch = self.__exprI(self.__index)
+            ch = self.__exprI()
             if ch == "+" or ch == "-":
                 # exponent sign
-                number += self.__exprI(self.__index)
+                number += self.__exprI()
                 self.__index += 1
-            while self.__isDecimalDigit(self.__exprICode(self.__index)):
+            while self.__isDecimalDigit(self.__exprICode()):
                 # exponent itself
-                number += self.__exprI(self.__index)
+                number += self.__exprI()
                 self.__index += 1
 
-            if not self.__isDecimalDigit(self.__exprICode(self.__index - 1)):
+            self.__index -= 1
+            isDecimalDigit = self.__isDecimalDigit(self.__exprICode())
+            self.__index += 1
+
+            if not isDecimalDigit:
                 self.__throw_error(
-                    "Expected exponent (" + number + self.__exprI(self.__index) + ")"
+                    "Expected exponent (" + number + self.__exprI() + ")"
                 )
 
-        chCode = self.__exprICode(self.__index)
+        chCode = self.__exprICode()
         # Check to make sure this isn't a variable name that start with a number (123abc)
         if PreJsPy.__isIdentifierStart(chCode):
             self.__throw_error(
                 "Variable names cannot start with a number ("
                 + number
-                + self.__exprI(self.__index)
+                + self.__exprI()
                 + ")",
             )
         elif chCode == PreJsPy.PERIOD_CODE:
@@ -687,14 +691,14 @@ class PreJsPy(Generic[L, U, B]):
 
         index_start = self.__index
 
-        quote = self.__exprI(self.__index)
+        quote = self.__exprI()
         self.__index += 1
 
         closed = False
         ch = None
 
         while self.__index < self.__length:
-            ch = self.__exprI(self.__index)
+            ch = self.__exprI()
             self.__index += 1
 
             if ch == quote:
@@ -703,7 +707,7 @@ class PreJsPy(Generic[L, U, B]):
 
             if ch == "\\":
                 # Check for all of the common escape codes
-                ch = self.__exprI(self.__index)
+                ch = self.__exprI()
                 self.__index += 1
 
                 if ch == "n":
@@ -741,9 +745,9 @@ class PreJsPy(Generic[L, U, B]):
     # (e.g. `true`, `false`, `null`)
     def __gobbleIdentifier(self) -> Union[Literal[L, U, B], Identifier[L, U, B]]:
         # can't gobble an identifier if the first character isn't the start of one.
-        ch = self.__exprICode(self.__index)
+        ch = self.__exprICode()
         if not PreJsPy.__isIdentifierStart(ch):
-            self.__throw_error("Unexpected " + self.__exprI(self.__index))
+            self.__throw_error("Unexpected " + self.__exprI())
 
         # record where the identifier starts
         start = self.__index
@@ -751,7 +755,7 @@ class PreJsPy(Generic[L, U, B]):
 
         # continue scanning the literal
         while self.__index < self.__length:
-            ch = self.__exprICode(self.__index)
+            ch = self.__exprICode()
             if not PreJsPy.__isIdentifierPart(ch):
                 break
 
@@ -785,7 +789,7 @@ class PreJsPy(Generic[L, U, B]):
 
         while self.__index < self.__length:
             self.__gobbleSpaces()
-            ch_i = self.__exprICode(self.__index)
+            ch_i = self.__exprICode()
 
             if ch_i == termination:
                 self.__index += 1
@@ -812,7 +816,7 @@ class PreJsPy(Generic[L, U, B]):
     def __gobbleVariable(self) -> Optional['Expression[L,U,B]']:
         ch_i = None
 
-        ch_i = self.__exprICode(self.__index)
+        ch_i = self.__exprICode()
 
         if ch_i == PreJsPy.OPAREN_CODE:
             node = self.__gobbleGroup()
@@ -824,7 +828,7 @@ class PreJsPy(Generic[L, U, B]):
 
         self.__gobbleSpaces()
 
-        ch_i = self.__exprICode(self.__index)
+        ch_i = self.__exprICode()
 
         while (
             ch_i == PreJsPy.PERIOD_CODE
@@ -862,7 +866,7 @@ class PreJsPy(Generic[L, U, B]):
 
                 self.__gobbleSpaces()
 
-                ch_i = self.__exprICode(self.__index)
+                ch_i = self.__exprICode()
 
                 if ch_i != PreJsPy.CBRACK_CODE:
                     self.__throw_error("Unclosed [")
@@ -879,7 +883,7 @@ class PreJsPy(Generic[L, U, B]):
                 }
 
             self.__gobbleSpaces()
-            ch_i = self.__exprICode(self.__index)
+            ch_i = self.__exprICode()
 
         return node
 
@@ -894,7 +898,7 @@ class PreJsPy(Generic[L, U, B]):
 
         self.__gobbleSpaces()
 
-        if self.__exprICode(self.__index) != PreJsPy.CPAREN_CODE:
+        if self.__exprICode() != PreJsPy.CPAREN_CODE:
             self.__throw_error("Unclosed (")
 
         self.__index += 1
