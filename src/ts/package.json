@@ -20,5 +20,11 @@
   "bugs": {
     "url": "https://github.com/tkw1536/PreJsPy/issues"
   },
-  "homepage": "https://github.com/tkw1536/PreJsPy"
+  "homepage": "https://github.com/tkw1536/PreJsPy",
+  "devDependencies": {
+    "@types/node": "^20.4.1",
+    "ts-node": "^10.9.1",
+    "ts-standard": "^12.0.2",
+    "typescript": "^5.1.6"
+  }
 }

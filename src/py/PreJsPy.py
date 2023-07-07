@@ -49,9 +49,10 @@ Expression: TypeAlias = Union[
     "Ary[L,U,B]",
 ]
 
+
 class Compound(TypedDict, Generic[L, U, B]):
     type: tLiteral["Compound"]
-    body: List['Expression[L,U,B]']
+    body: List["Expression[L,U,B]"]
 
 
 class Identifier(TypedDict, Generic[L, U, B]):
@@ -62,8 +63,8 @@ class Identifier(TypedDict, Generic[L, U, B]):
 class Member(TypedDict, Generic[L, U, B]):
     type: tLiteral["MemberExpression"]
     computed: bool
-    object: 'Expression[L,U,B]'
-    property: 'Expression[L,U,B]'
+    object: "Expression[L,U,B]"
+    property: "Expression[L,U,B]"
 
 
 class Literal(TypedDict, Generic[L, U, B]):
@@ -74,32 +75,34 @@ class Literal(TypedDict, Generic[L, U, B]):
 
 class Call(TypedDict, Generic[L, U, B]):
     type: tLiteral["CallExpression"]
-    arguments: List['Expression[L,U,B]']
-    callee: 'Expression[L,U,B]'
+    arguments: List["Expression[L,U,B]"]
+    callee: "Expression[L,U,B]"
 
 
 class Unary(TypedDict, Generic[L, U, B]):
     type: tLiteral["UnaryExpression"]
     operator: U
-    argument: 'Expression[L,U,B]'
+    argument: "Expression[L,U,B]"
+
 
 class Binary(TypedDict, Generic[L, U, B]):
     type: tLiteral["BinaryExpression"]
     operator: B
-    left: 'Expression[L,U,B]'
-    right: 'Expression[L,U,B]'
+    left: "Expression[L,U,B]"
+    right: "Expression[L,U,B]"
 
 
 class Condition(TypedDict, Generic[L, U, B]):
     type: tLiteral["ConditionalExpression"]
-    test: 'Expression[L,U,B]'
-    consequent: 'Expression[L,U,B]'
-    alternate: 'Expression[L,U,B]'
+    test: "Expression[L,U,B]"
+    consequent: "Expression[L,U,B]"
+    alternate: "Expression[L,U,B]"
 
 
 class Ary(TypedDict, Generic[L, U, B]):
     type: tLiteral["ArrayExpression"]
-    elements: List['Expression[L,U,B]']
+    elements: List["Expression[L,U,B]"]
+
 
 class _BiopInfo(TypedDict, Generic[B]):
     value: B
@@ -199,24 +202,6 @@ class PreJsPy(Generic[L, U, B]):
         raise Exception(msg)
 
     @staticmethod
-    def __createBinaryExpression(
-        operator: B, left: 'Expression[L,U,B]', right: 'Expression[L,U,B]'
-    ) -> Binary[L, U, B]:
-        """Utility function that creates a binary expression to be returned.
-
-        :param operator: Operator to use for binary expression.
-        :param left: Left expression to use for the binary expression.
-        :param right: Right expression to use for the binary expression.
-        """
-
-        return {
-            "type": BINARY_EXP,
-            "operator": operator,
-            "left": left,
-            "right": right,
-        }
-
-    @staticmethod
     def __getMaxKeyLen(o: Dict[B, int]) -> int:
         """Gets the longest key length of an object
 
@@ -283,7 +268,7 @@ class PreJsPy(Generic[L, U, B]):
     # CONFIG
     # =======
 
-    def getConfig(self) -> Config[L,U,B]:
+    def getConfig(self) -> Config[L, U, B]:
         """Gets the current config used by this parser."""
         return {
             "Operators": {
@@ -300,7 +285,7 @@ class PreJsPy(Generic[L, U, B]):
             },
         }
 
-    def setConfig(self, config: Optional[PartialConfig[L,U,B]]) -> Config[L,U,B]:
+    def setConfig(self, config: Optional[PartialConfig[L, U, B]]) -> Config[L, U, B]:
         """Sets the config used by this parser.
 
         :param config: (Possibly partial) configuration to use.
@@ -320,7 +305,9 @@ class PreJsPy(Generic[L, U, B]):
                         self.__config["Operators"]["Unary"]
                     )
                 if "Binary" in config["Operators"]:
-                    self.__config["Operators"]["Binary"] = config["Operators"]["Binary"].copy()
+                    self.__config["Operators"]["Binary"] = config["Operators"][
+                        "Binary"
+                    ].copy()
                     self.__max_binop_len = PreJsPy.__getMaxKeyLen(
                         self.__config["Operators"]["Binary"]
                     )
@@ -365,12 +352,13 @@ class PreJsPy(Generic[L, U, B]):
     # INIT CODE
     # =========
 
-    __config: Config[L,U,B]
+    __config: Config[L, U, B]
+
     def __init__(self) -> None:
         """Creates a new PreJSPyParser instance."""
 
-        self.__config = cast(Config[L,U,B], self.__class__.getDefaultConfig())
-        self.setConfig(cast(PartialConfig[L,U,B], self.__config))
+        self.__config = cast(Config[L, U, B], self.__class__.GetDefaultConfig())
+        self.setConfig(cast(PartialConfig[L, U, B], self.__config))
 
     # ============
     # MISC HELPERS
@@ -398,7 +386,7 @@ class PreJsPy(Generic[L, U, B]):
     def __exprI(self) -> str:
         if self.__index >= self.__length:
             return ""
-        
+
         return self.__expr[self.__index]
 
     def __exprICode(self) -> int:
@@ -407,7 +395,7 @@ class PreJsPy(Generic[L, U, B]):
 
         return ord(self.__expr[self.__index])
 
-    def parse(self, expr: str) -> 'Expression[L, U, B]':
+    def Parse(self, expr: str) -> "Expression[L, U, B]":
         """Parses an expression expr into a parse tree.
 
         :param expr: Expression to parse.
@@ -425,7 +413,7 @@ class PreJsPy(Generic[L, U, B]):
             self.__expr = ""
             self.__length = 0
 
-    def __gobbleCompound(self) -> 'Expression[L,U,B]':
+    def __gobbleCompound(self) -> "Expression[L,U,B]":
         """Gobbles a single or compound expression"""
         nodes = []
         ch_i = None
@@ -461,7 +449,7 @@ class PreJsPy(Generic[L, U, B]):
             self.__index += 1
             ch = self.__exprICode()
 
-    def __gobbleExpression(self) -> Optional['Expression[L,U,B]']:
+    def __gobbleExpression(self) -> Optional["Expression[L,U,B]"]:
         """Main parsing function to parse any kind of expression"""
 
         # This function attempts to parse a tertiary expression or a binary expression.
@@ -524,7 +512,7 @@ class PreJsPy(Generic[L, U, B]):
 
     # This function is responsible for gobbling an individual expression,
     # e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
-    def __gobbleBinaryExpression(self) -> Optional['Expression[L,U,B]']:
+    def __gobbleBinaryExpression(self) -> Optional["Expression[L,U,B]"]:
         # First, try to get the leftmost thing
         # Then, check to see if there's a binary operator operating on that leftmost thing
         left = self.__gobbleToken()
@@ -557,8 +545,14 @@ class PreJsPy(Generic[L, U, B]):
             # Reduce: make a binary expression from the three topmost entries.
             while (len(ops) > 0) and prec < ops[-1]["prec"]:
                 right, left = exprs.pop(), exprs.pop()
+                op = ops.pop()
                 exprs.append(
-                    PreJsPy.__createBinaryExpression(ops.pop()["value"], left, right)
+                    {
+                        "type": BINARY_EXP,
+                        "operator": op["value"],
+                        "left": left,
+                        "right": right,
+                    }
                 )
 
             # gobble the next token in the tree
@@ -574,7 +568,12 @@ class PreJsPy(Generic[L, U, B]):
         j = len(ops) - 1
         node = exprs[i]
         while i > 0 and j >= 0:
-            node = PreJsPy.__createBinaryExpression(ops[j]["value"], exprs[i - 1], node)
+            node = {
+                "type": BINARY_EXP,
+                "operator": ops[j]["value"],
+                "left": exprs[i - 1],
+                "right": node,
+            }
             j -= 1
             i -= 1
 
@@ -582,7 +581,7 @@ class PreJsPy(Generic[L, U, B]):
 
     # An individual part of a binary expression:
     # e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
-    def __gobbleToken(self) -> Optional['Expression[L,U,B]']:
+    def __gobbleToken(self) -> Optional["Expression[L,U,B]"]:
         ch: int = -1
         to_check = None
         tc_len = None
@@ -782,7 +781,7 @@ class PreJsPy(Generic[L, U, B]):
     # `(` or `[` has already been gobbled, and gobbles expressions and commas
     # until the terminator character `)` or `]` is encountered.
     # e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
-    def __gobbleArguments(self, termination: int) -> List['Expression[L,U,B]']:
+    def __gobbleArguments(self, termination: int) -> List["Expression[L,U,B]"]:
         ch_i = None
         args = []  # type: List[Expression[L,U,B]]
         node = None
@@ -813,7 +812,7 @@ class PreJsPy(Generic[L, U, B]):
     # e.g. `foo`, `bar.baz`, `foo['bar'].baz`
     # It also gobbles function calls:
     # e.g. `Math.acos(obj.angle)`
-    def __gobbleVariable(self) -> Optional['Expression[L,U,B]']:
+    def __gobbleVariable(self) -> Optional["Expression[L,U,B]"]:
         ch_i = None
 
         ch_i = self.__exprICode()
@@ -892,7 +891,7 @@ class PreJsPy(Generic[L, U, B]):
     # and then tries to gobble everything within that parenthesis, assuming
     # that the next thing it should see is the close parenthesis. If not,
     # then the expression probably doesn't have a `)`
-    def __gobbleGroup(self) -> Optional['Expression[L,U,B]']:
+    def __gobbleGroup(self) -> Optional["Expression[L,U,B]"]:
         self.__index += 1
         node = self.__gobbleExpression()
 
@@ -919,7 +918,7 @@ class PreJsPy(Generic[L, U, B]):
         }
 
     @staticmethod
-    def getDefaultConfig() -> Config[Any,str,str]:
+    def GetDefaultConfig() -> Config[Any, str, str]:
         """Returns the default configuration"""
         return {
             "Operators": {

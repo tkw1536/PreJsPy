@@ -1,4 +1,4 @@
-var PreJsPy = require("./src/js/PreJsPy.js");
+var PreJsPy = require("./src/ts/PreJsPy");
 
 /**
  * Parses a single expression and prints the result to stdout.
@@ -6,7 +6,7 @@ var PreJsPy = require("./src/js/PreJsPy.js");
  */
 function run_example(expr){
     var p = new PreJsPy.PreJsPy();
-    console.log(p.parse(expr));
+    console.log(p.Parse(expr));
 }
 
 function main(){

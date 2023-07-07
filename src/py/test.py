@@ -76,10 +76,10 @@ class TestPreJsPy(unittest.TestCase):
         :type message: str
         """
 
-        instance.setConfig(PreJsPy.PreJsPy.getDefaultConfig())
+        instance.setConfig(PreJsPy.PreJsPy.GetDefaultConfig())
         instance.setConfig(config)
 
-        self.assertEqual(instance.parse(inp), out, msg=message)
+        self.assertEqual(instance.Parse(inp), out, msg=message)
 
 if __name__ == '__main__':
     print("Starting python tests ...")
