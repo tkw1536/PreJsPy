@@ -11,13 +11,24 @@
     "output": {"type":"Literal","value":1000,"raw":"1000"},
     "message": "multiple-digit integer"
   },
-
+  {
+    "config": {"Features": {"Literals": {"NumericSeparator": "_"}}},
+    "input": "1_000_000",
+    "output": {"type":"Literal","value":1000000,"raw":"1_000_000"},
+    "message": "multiple-digit with separator"
+  },
 
   {
     "config": {},
     "input": "1.23",
     "output": {"type":"Literal","value":1.23,"raw":"1.23"},
     "message": "floating point value"
+  },
+  {
+    "config": {"Features": {"Literals": {"NumericSeparator": "_"}}},
+    "input": "1__.2_3",
+    "output": {"type":"Literal","value":1.23,"raw":"1__.2_3"},
+    "message": "floating point value with separators"
   },
   {
     "config": {},

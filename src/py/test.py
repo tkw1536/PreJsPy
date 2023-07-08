@@ -76,8 +76,8 @@ class TestPreJsPy(unittest.TestCase):
         :type message: str
         """
 
-        instance.setConfig(PreJsPy.PreJsPy.GetDefaultConfig())
-        instance.setConfig(config)
+        instance.SetConfig(PreJsPy.PreJsPy.GetDefaultConfig())
+        instance.SetConfig(config)
 
         self.assertEqual(instance.Parse(inp), out, msg=message)
 
