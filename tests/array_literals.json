@@ -8,13 +8,13 @@
   {
     "config": {},
     "input": "[1,2,3]",
-    "output": {"elements": [{"raw": "1", "type": "Literal", "value": 1.0}, {"raw": "2", "type": "Literal", "value": 2.0}, {"raw": "3", "type": "Literal", "value": 3.0}], "type": "ArrayExpression"},
+    "output": {"elements": [{"raw": "1", "type": "Literal", "value": 1.0, "kind": "number"}, {"raw": "2", "type": "Literal", "value": 2.0, "kind": "number"}, {"raw": "3", "type": "Literal", "value": 3.0, "kind": "number"}], "type": "ArrayExpression"},
     "message": "non-empty integer array"
   },
   {
     "config": {},
     "input": "[1,2,[1,2,3]]",
-    "output": {"elements": [{"raw": "1", "type": "Literal", "value": 1.0}, {"raw": "2", "type": "Literal", "value": 2.0}, {"elements": [{"raw": "1", "type": "Literal", "value": 1.0}, {"raw": "2", "type": "Literal", "value": 2.0}, {"raw": "3", "type": "Literal", "value": 3.0}], "type": "ArrayExpression"}], "type": "ArrayExpression"},
+    "output": {"elements": [{"raw": "1", "type": "Literal", "value": 1.0, "kind": "number"}, {"raw": "2", "type": "Literal", "value": 2.0, "kind": "number"}, {"elements": [{"raw": "1", "type": "Literal", "value": 1.0, "kind": "number"}, {"raw": "2", "type": "Literal", "value": 2.0, "kind": "number"}, {"raw": "3", "type": "Literal", "value": 3.0, "kind": "number"}], "type": "ArrayExpression"}], "type": "ArrayExpression"},
     "message": "nested integer array"
   }
 ]

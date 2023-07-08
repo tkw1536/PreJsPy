@@ -2,7 +2,7 @@
   {
     "config": {},
     "input": "-0",
-    "output": {"operator": "-", "argument": {"raw": "0", "type": "Literal", "value": 0.0}, "type": "UnaryExpression"},
+    "output": {"operator": "-", "argument": {"raw": "0", "type": "Literal", "value": 0.0, "kind": "number"}, "type": "UnaryExpression"},
     "message": "unary minus"
   },
   {
@@ -20,7 +20,7 @@
   {
     "config": {},
     "input": "+0",
-    "output": {"operator": "+", "argument": {"raw": "0", "type": "Literal", "value": 0.0}, "type": "UnaryExpression"},
+    "output": {"operator": "+", "argument": {"raw": "0", "type": "Literal", "value": 0.0, "kind": "number"}, "type": "UnaryExpression"},
     "message": "unary plus"
   }
 ]

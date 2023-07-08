@@ -16,6 +16,8 @@
 export type Expression<L, U extends string, B extends string> =
     Identifier |
     Literal<L> |
+    StringLiteral |
+    NumericLiteral |
     Compound<L, U, B> |
     Member<L, U, B> |
     Call<L, U, B> |
@@ -64,7 +66,21 @@ interface Member<L, U extends string, B extends string> {
 
 interface Literal<L> {
   type: 'Literal'
-  value: L | string | number
+  value: L
+  raw: string
+}
+
+interface StringLiteral {
+  type: 'Literal'
+  kind: 'string'
+  value: string
+  raw: string
+}
+
+interface NumericLiteral {
+  type: 'Literal'
+  kind: 'number'
+  value: number
   raw: string
 }
 
@@ -719,7 +735,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
      * keep track of everything in the numeric literal and then calling `parseFloat` on that string
      */
-  private gobbleNumericLiteral (): Literal<number> {
+  private gobbleNumericLiteral (): NumericLiteral {
     const start = this.index
 
     // gobble the number itself
@@ -779,6 +795,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
     return {
       type: LITERAL,
+      kind: 'number',
       value: value,
       raw: number
     }
@@ -788,7 +805,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * Parses a string literal, staring with single or double quotes with basic support for escape codes
      * e.g. `"hello world"`, `'this is\na linebreak'`
      */
-  private gobbleStringLiteral (): Literal<string> {
+  private gobbleStringLiteral (): StringLiteral {
     let str = ''
     const quote = this.char()
     let closed = false
@@ -856,6 +873,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
     return {
       type: LITERAL,
+      kind: 'string',
       value: str,
       raw: quote + str + quote // TODO: Does this need fixing
     }

@@ -41,7 +41,9 @@ Expression: TypeAlias = Union[
     "Compound[L,U,B]",
     "Identifier[L,U,B]",
     "Member[L,U,B]",
-    "Literal[L,U,B]",
+    "Literal[L]",
+    "StringLiteral",
+    "NumericLiteral",
     "Call[L,U,B]",
     "Unary[L,U,B]",
     "Binary[L,U,B]",
@@ -67,9 +69,21 @@ class Member(TypedDict, Generic[L, U, B]):
     property: "Expression[L,U,B]"
 
 
-class Literal(TypedDict, Generic[L, U, B]):
+class Literal(TypedDict, Generic[L]):
     type: tLiteral["Literal"]
-    value: L | float | str
+    value: L
+    raw: str
+
+class StringLiteral(TypedDict):
+    type: tLiteral["Literal"]
+    kind: "string"
+    value: str
+    raw: str
+
+class NumericLiteral(TypedDict):
+    type: tLiteral["Literal"]
+    kind: "number"
+    value: float
     raw: str
 
 
@@ -664,7 +678,7 @@ class PreJsPy(Generic[L, U, B]):
 
     # Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
     # keep track of everything in the numeric literal and then calling `parseFloat` on that string
-    def __gobbleNumericLiteral(self) -> Literal[L, U, B]:
+    def __gobbleNumericLiteral(self) -> NumericLiteral:
         start = self.__index
 
         # gobble the number itself
@@ -716,11 +730,11 @@ class PreJsPy(Generic[L, U, B]):
         if self.__config["Features"]["Literals"]["NumericSeparator"] != "":
             number = self.__expr[start : self.__index]
 
-        return {"type": LITERAL, "value": value, "raw": number}
+        return {"type": LITERAL, "kind": "number", "value": value, "raw": number}
 
     # Parses a string literal, staring with single or double quotes with basic support for escape codes
     # e.g. `"hello world"`, `'this is\nJSEP'`
-    def __gobbleStringLiteral(self) -> Literal[L, U, B]:
+    def __gobbleStringLiteral(self) -> StringLiteral:
         s = ""
 
         index_start = self.__index
@@ -771,13 +785,13 @@ class PreJsPy(Generic[L, U, B]):
             self.__index = index_start
             self.__throw_error("Unexpected string literal")
 
-        return {"type": LITERAL, "value": s, "raw": quote + s + quote}
+        return {"type": LITERAL, "kind": "string", "value": s, "raw": quote + s + quote}
 
     # Gobbles only identifiers
     # e.g.: `foo`, `_value`, `$x1`
     # Also, this function checks if that identifier is a literal:
     # (e.g. `true`, `false`, `null`)
-    def __gobbleIdentifier(self) -> Union[Literal[L, U, B], Identifier[L, U, B]]:
+    def __gobbleIdentifier(self) -> Union[Literal[L], Identifier[L, U, B]]:
         # can't gobble an identifier if the first character isn't the start of one.
         ch = self.__charCode()
         if not PreJsPy.__isIdentifierStart(ch):

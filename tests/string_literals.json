@@ -2,37 +2,37 @@
   {
     "config": {},
     "input": "\"\"",
-    "output": {"raw": "\"\"", "value": "", "type": "Literal"},
+    "output": {"raw": "\"\"", "value": "", "type": "Literal", "kind":"string"},
     "message": "empty double quotes literal"
   },
   {
     "config": {},
     "input": "\"Hello world\"",
-    "output": {"raw": "\"Hello world\"", "value": "Hello world", "type": "Literal"},
+    "output": {"raw": "\"Hello world\"", "value": "Hello world", "type": "Literal", "kind":"string"},
     "message": "non-empty double quotes literal"
   },
   {
     "config": {},
     "input": "\"\\n\\t\\r\\\"\\'\"",
-    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "\"\n\t\r\"'\""},
+    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "\"\n\t\r\"'\"", "kind":"string"},
     "message": "escaped double quotes literal"
   },
   {
     "config": {},
     "input": "''",
-    "output": {"value": "", "type": "Literal", "raw": "''"},
+    "output": {"value": "", "type": "Literal", "raw": "''", "kind":"string"},
     "message": "empty single quotes literal"
   },
   {
     "config": {},
     "input": "'Hello world'",
-    "output": {"value": "Hello world", "type": "Literal", "raw": "'Hello world'"},
+    "output": {"value": "Hello world", "type": "Literal", "raw": "'Hello world'", "kind":"string"},
     "message": "non-empty single quotes literal"
   },
   {
     "config": {},
     "input": "'\\n\\t\\r\\\"\\''",
-    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "'\n\t\r\"''"},
+    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "'\n\t\r\"''", "kind":"string"},
     "message": "escaped single quotes literal"
   }
 ]

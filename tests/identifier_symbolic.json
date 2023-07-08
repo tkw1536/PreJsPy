@@ -32,13 +32,13 @@
   {
     "config": {},
     "input": "hello[\"world\"]",
-    "output": {"property": {"raw": "\"world\"", "value": "world", "type": "Literal"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
+    "output": {"property": {"raw": "\"world\"", "value": "world", "type": "Literal", "kind": "string"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
     "message": "property access via square bracket double string"
   },
   {
     "config": {},
     "input": "hello['world']",
-    "output": {"property": {"raw": "'world'", "value": "world", "type": "Literal"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
+    "output": {"property": {"raw": "'world'", "value": "world", "type": "Literal", "kind": "string"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
     "message": "property access via square bracket single string"
   },
   {

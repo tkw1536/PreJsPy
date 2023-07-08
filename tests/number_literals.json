@@ -2,128 +2,128 @@
   {
     "config": {},
     "input": "1",
-    "output": {"type":"Literal","value":1,"raw":"1"},
+    "output": {"type":"Literal","kind":"number","value":1,"raw":"1"},
     "message": "single-digit integer"
   },
   {
     "config": {},
     "input": "1000",
-    "output": {"type":"Literal","value":1000,"raw":"1000"},
+    "output": {"type":"Literal","kind":"number","value":1000,"raw":"1000"},
     "message": "multiple-digit integer"
   },
   {
     "config": {"Features": {"Literals": {"NumericSeparator": "_"}}},
     "input": "1_000_000",
-    "output": {"type":"Literal","value":1000000,"raw":"1_000_000"},
+    "output": {"type":"Literal","kind":"number","value":1000000,"raw":"1_000_000"},
     "message": "multiple-digit with separator"
   },
 
   {
     "config": {},
     "input": "1.23",
-    "output": {"type":"Literal","value":1.23,"raw":"1.23"},
+    "output": {"type":"Literal","kind":"number","value":1.23,"raw":"1.23"},
     "message": "floating point value"
   },
   {
     "config": {"Features": {"Literals": {"NumericSeparator": "_"}}},
     "input": "1__.2_3",
-    "output": {"type":"Literal","value":1.23,"raw":"1__.2_3"},
+    "output": {"type":"Literal","kind":"number","value":1.23,"raw":"1__.2_3"},
     "message": "floating point value with separators"
   },
   {
     "config": {},
     "input": "1E5",
-    "output": {"type":"Literal","value":100000,"raw":"1E5"},
+    "output": {"type":"Literal","kind":"number","value":100000,"raw":"1E5"},
     "message": "single-digit floating point with unsigned exponential"
   },
   {
     "config": {},
     "input": "1E+5",
-    "output": {"type":"Literal","value":100000,"raw":"1E+5"},
+    "output": {"type":"Literal","kind":"number","value":100000,"raw":"1E+5"},
     "message": "single-digit floating point with positive exponential"
   },
   {
     "config": {},
     "input": "1E-5",
-    "output": {"type":"Literal","value":0.00001,"raw":"1E-5"},
+    "output": {"type":"Literal","kind":"number","value":0.00001,"raw":"1E-5"},
     "message": "single-digit floating point with negative exponential"
   },
   {
     "input": "10E5",
     "config": {},
-    "output": {"type":"Literal","value":1000000,"raw":"10E5"},
+    "output": {"type":"Literal","kind":"number","value":1000000,"raw":"10E5"},
     "message": "multiple-digit floating point with unsigned exponential"
   },
   {
     "config": {},
     "input": "10E+5",
-    "output": {"type":"Literal","value":1000000,"raw":"10E+5"},
+    "output": {"type":"Literal","kind":"number","value":1000000,"raw":"10E+5"},
     "message": "multiple-digit floating point with positive exponential"
   },
   {
     "config": {},
     "input": "10E-5",
-    "output": {"type":"Literal","value":0.0001,"raw":"10E-5"},
+    "output": {"type":"Literal","kind":"number","value":0.0001,"raw":"10E-5"},
     "message": "multiple-digit floating point with negative exponential"
   },
   {
     "config": {},
     "input": "+1",
-    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","value":1,"raw":"1"}},
+    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","kind":"number","value":1,"raw":"1"}},
     "message": "integer with plus sign"
   },
   {
     "config": {},
     "input": "+1.23",
-    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","value":1.23,"raw":"1.23"}},
+    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","kind":"number","value":1.23,"raw":"1.23"}},
     "message": "floating point value with plus sign"
   },
   {
     "config": {},
     "input": "+1E5",
-    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","value":100000,"raw":"1E5"}},
+    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","kind":"number","value":100000,"raw":"1E5"}},
     "message": "single-digit floating point with unsigned exponential and plus sign"
   },
   {
     "config": {},
     "input": "+1E+5",
-    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","value":100000,"raw":"1E+5"}},
+    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","kind":"number","value":100000,"raw":"1E+5"}},
     "message": "single-digit floating point with positive exponential and plus sign"
   },
   {
     "config": {},
     "input": "+1E-5",
-    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","value":0.00001,"raw":"1E-5"}},
+    "output": {"type":"UnaryExpression","operator":"+","argument":{"type":"Literal","kind":"number","value":0.00001,"raw":"1E-5"}},
     "message": "single-digit floating point with negative exponential and plus sign"
   },
   {
     "config": {},
     "input": "-1",
-    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","value":1,"raw":"1"}},
+    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","kind":"number","value":1,"raw":"1"}},
     "message": "integer with minus sign"
   },
   {
     "config": {},
     "input": "-1.23",
-    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","value":1.23,"raw":"1.23"}},
+    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","kind":"number","value":1.23,"raw":"1.23"}},
     "message": "floating point value with minus sign"
   },
   {
     "config": {},
     "input": "-1E5",
-    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","value":100000,"raw":"1E5"}},
+    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","kind":"number","value":100000,"raw":"1E5"}},
     "message": "single-digit floating point with unsigned exponential and minus sign"
   },
   {
     "config": {},
     "input": "-1E+5",
-    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","value":100000,"raw":"1E+5"}},
+    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","kind":"number","value":100000,"raw":"1E+5"}},
     "message": "single-digit floating point with positive exponential and minus sign"
   },
   {
     "config": {},
     "input": "-1E-5",
-    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","value":0.00001,"raw":"1E-5"}},
+    "output": {"type":"UnaryExpression","operator":"-","argument":{"type":"Literal","kind":"number","value":0.00001,"raw":"1E-5"}},
     "message": "single-digit floating point with negative exponential and minus sign"
   }
 ]
