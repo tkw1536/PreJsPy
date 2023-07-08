@@ -16,33 +16,9 @@ from typing import (
     Optional,
     cast,
     TypeVar,
+    TypedDict,
     NoReturn,
 )
-
-try:
-    from typing import TypeAlias
-except ImportError:
-    try:
-        from typing_extensions import TypeAlias
-    except ImportError:
-        TypeAlias = Any
-
-
-try:
-    from typing import TypedDict
-except ImportError:
-    try:
-        from typing_extensions import TypedDict
-    except ImportError:
-
-        class TypedDict(object):  # type: ignore[no-redef]
-            def __init_subclass__(cls, *args, total=True, **kwargs):
-                super().__init_subclass__(*args, **kwargs)
-
-
-L = TypeVar("L")
-U = TypeVar("U", bound=str)
-B = TypeVar("B", bound=str)
 
 
 COMPOUND: Final = "Compound"
@@ -55,159 +31,151 @@ BINARY_EXP: Final = "BinaryExpression"
 CONDITIONAL_EXP: Final = "ConditionalExpression"
 ARRAY_EXP: Final = "ArrayExpression"
 
+L = TypeVar("L")
+U = TypeVar("U", bound=str)
+B = TypeVar("B", bound=str)
 
-Expression: TypeAlias = Union[
-    "Compound[L,U,B]",
-    "Identifier",
-    "Member[L,U,B]",
-    "Literal[L]",
-    "StringLiteral",
-    "NumericLiteral",
-    "Call[L,U,B]",
-    "Unary[L,U,B]",
-    "Binary[L,U,B]",
-    "Condition[L,U,B]",
-    "Ary[L,U,B]",
-]
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    try:
+        from typing import TypeAlias
+    except ImportError:
+        try:
+            from typing_extensions import TypeAlias
+        except ImportError:
+            TypeAlias = Any  # type: ignore[assignment]
 
-class Compound(TypedDict, Generic[L, U, B]):
-    type: tLiteral["Compound"]
-    body: List["Expression[L,U,B]"]
+    Expression: TypeAlias = Union[
+        "Compound[L,U,B]",
+        "Identifier",
+        "Member[L,U,B]",
+        "Literal[L]",
+        "StringLiteral",
+        "NumericLiteral",
+        "Call[L,U,B]",
+        "Unary[L,U,B]",
+        "Binary[L,U,B]",
+        "Condition[L,U,B]",
+        "Ary[L,U,B]",
+    ]
 
+    class Compound(TypedDict, Generic[L, U, B]):
+        type: tLiteral["Compound"]
+        body: List["Expression[L,U,B]"]
 
-class Identifier(TypedDict):
-    type: tLiteral["Identifier"]
-    name: str
+    class Identifier(TypedDict):
+        type: tLiteral["Identifier"]
+        name: str
 
+    class Member(TypedDict, Generic[L, U, B]):
+        type: tLiteral["MemberExpression"]
+        computed: bool
+        object: "Expression[L,U,B]"
+        property: "Expression[L,U,B]"
 
-class Member(TypedDict, Generic[L, U, B]):
-    type: tLiteral["MemberExpression"]
-    computed: bool
-    object: "Expression[L,U,B]"
-    property: "Expression[L,U,B]"
+    class Literal(TypedDict, Generic[L]):
+        type: tLiteral["Literal"]
+        value: L
+        raw: str
 
+    class StringLiteral(TypedDict):
+        type: tLiteral["Literal"]
+        kind: tLiteral["string"]
+        value: str
+        raw: str
 
-class Literal(TypedDict, Generic[L]):
-    type: tLiteral["Literal"]
-    value: L
-    raw: str
+    class NumericLiteral(TypedDict):
+        type: tLiteral["Literal"]
+        kind: tLiteral["number"]
+        value: float
+        raw: str
 
+    class Call(TypedDict, Generic[L, U, B]):
+        type: tLiteral["CallExpression"]
+        arguments: List["Expression[L,U,B]"]
+        callee: "Expression[L,U,B]"
 
-class StringLiteral(TypedDict):
-    type: tLiteral["Literal"]
-    kind: tLiteral["string"]
-    value: str
-    raw: str
+    class Unary(TypedDict, Generic[L, U, B]):
+        type: tLiteral["UnaryExpression"]
+        operator: U
+        argument: "Expression[L,U,B]"
 
+    class Binary(TypedDict, Generic[L, U, B]):
+        type: tLiteral["BinaryExpression"]
+        operator: B
+        left: "Expression[L,U,B]"
+        right: "Expression[L,U,B]"
 
-class NumericLiteral(TypedDict):
-    type: tLiteral["Literal"]
-    kind: tLiteral["number"]
-    value: float
-    raw: str
+    class Condition(TypedDict, Generic[L, U, B]):
+        type: tLiteral["ConditionalExpression"]
+        test: "Expression[L,U,B]"
+        consequent: "Expression[L,U,B]"
+        alternate: "Expression[L,U,B]"
 
+    class Ary(TypedDict, Generic[L, U, B]):
+        type: tLiteral["ArrayExpression"]
+        elements: List["Expression[L,U,B]"]
 
-class Call(TypedDict, Generic[L, U, B]):
-    type: tLiteral["CallExpression"]
-    arguments: List["Expression[L,U,B]"]
-    callee: "Expression[L,U,B]"
+    class _BiopInfo(TypedDict, Generic[B]):
+        value: B
+        prec: int
 
+    class _OperatorsConfig(TypedDict, Generic[L, U, B]):
+        Literals: Dict[str, L]
+        Unary: List[U]
+        Binary: Dict[B, int]
 
-class Unary(TypedDict, Generic[L, U, B]):
-    type: tLiteral["UnaryExpression"]
-    operator: U
-    argument: "Expression[L,U,B]"
+    class _PartialOperatorsConfig(TypedDict, Generic[L, U, B], total=False):
+        Literals: Dict[str, L]
+        Unary: List[U]
+        Binary: Dict[B, int]
 
+    class _Members(TypedDict):
+        Static: bool
+        Computed: bool
 
-class Binary(TypedDict, Generic[L, U, B]):
-    type: tLiteral["BinaryExpression"]
-    operator: B
-    left: "Expression[L,U,B]"
-    right: "Expression[L,U,B]"
+    class _PartialMembers(TypedDict, total=False):
+        Static: bool
+        Computed: bool
 
+    class _Literals(TypedDict):
+        Numeric: bool
+        NumericSeparator: str
+        String: bool
+        Array: bool
 
-class Condition(TypedDict, Generic[L, U, B]):
-    type: tLiteral["ConditionalExpression"]
-    test: "Expression[L,U,B]"
-    consequent: "Expression[L,U,B]"
-    alternate: "Expression[L,U,B]"
+    class _PartialLiterals(TypedDict, total=False):
+        Numeric: bool
+        NumericSeparator: str
+        String: bool
+        Array: bool
 
+    class _Features(TypedDict):
+        Compound: bool
+        Tertiary: bool
+        Identifiers: bool
+        Calls: bool
+        Members: _Members
+        Literals: _Literals
 
-class Ary(TypedDict, Generic[L, U, B]):
-    type: tLiteral["ArrayExpression"]
-    elements: List["Expression[L,U,B]"]
+    class _PartialFeatures(TypedDict, total=False):
+        Compound: bool
+        Tertiary: bool
+        Identifiers: bool
+        Calls: bool
+        Members: _PartialMembers
+        Literals: _PartialLiterals
 
+    class Config(TypedDict, Generic[L, U, B]):
+        """Configuration represents the configuration of a PreJsPy instance"""
 
-class _BiopInfo(TypedDict, Generic[B]):
-    value: B
-    prec: int
+        Operators: "_OperatorsConfig[L, U, B]"
+        Features: _Features
 
-
-class _OperatorsConfig(TypedDict, Generic[L, U, B]):
-    Literals: Dict[str, L]
-    Unary: List[U]
-    Binary: Dict[B, int]
-
-
-class _PartialOperatorsConfig(TypedDict, Generic[L, U, B], total=False):
-    Literals: Dict[str, L]
-    Unary: List[U]
-    Binary: Dict[B, int]
-
-
-class _Members(TypedDict):
-    Static: bool
-    Computed: bool
-
-
-class _PartialMembers(TypedDict, total=False):
-    Static: bool
-    Computed: bool
-
-
-class _Literals(TypedDict):
-    Numeric: bool
-    NumericSeparator: str
-    String: bool
-    Array: bool
-
-
-class _PartialLiterals(TypedDict, total=False):
-    Numeric: bool
-    NumericSeparator: str
-    String: bool
-    Array: bool
-
-
-class _Features(TypedDict):
-    Compound: bool
-    Tertiary: bool
-    Identifiers: bool
-    Calls: bool
-    Members: _Members
-    Literals: _Literals
-
-
-class _PartialFeatures(TypedDict, total=False):
-    Compound: bool
-    Tertiary: bool
-    Identifiers: bool
-    Calls: bool
-    Members: _PartialMembers
-    Literals: _PartialLiterals
-
-
-class Config(TypedDict, Generic[L, U, B]):
-    """Configuration represents the configuration of a PreJsPy instance"""
-
-    Operators: _OperatorsConfig[L, U, B]
-    Features: _Features
-
-
-class PartialConfig(TypedDict, Generic[L, U, B], total=False):
-    Operators: _PartialOperatorsConfig[L, U, B]
-    Features: _PartialFeatures
+    class PartialConfig(TypedDict, Generic[L, U, B], total=False):
+        Operators: _PartialOperatorsConfig[L, U, B]
+        Features: _PartialFeatures
 
 
 class PreJsPy(Generic[L, U, B]):
@@ -307,7 +275,7 @@ class PreJsPy(Generic[L, U, B]):
     # CONFIG
     # =======
 
-    def GetConfig(self) -> Config[L, U, B]:
+    def GetConfig(self) -> "Config[L, U, B]":
         """Gets the current config used by this parser."""
         return {
             "Operators": {
@@ -325,7 +293,9 @@ class PreJsPy(Generic[L, U, B]):
             },
         }
 
-    def SetConfig(self, config: Optional[PartialConfig[L, U, B]]) -> Config[L, U, B]:
+    def SetConfig(
+        self, config: Optional["PartialConfig[L, U, B]"]
+    ) -> "Config[L, U, B]":
         """Sets the config used by this parser.
 
         :param config: (Possibly partial) configuration to use.
@@ -400,13 +370,13 @@ class PreJsPy(Generic[L, U, B]):
     # INIT CODE
     # =========
 
-    __config: Config[L, U, B]
+    __config: "Config[L, U, B]"
 
     def __init__(self) -> None:
         """Creates a new PreJSPyParser instance."""
 
-        self.__config = cast(Config[L, U, B], self.__class__.GetDefaultConfig())
-        self.SetConfig(cast(PartialConfig[L, U, B], self.__config))
+        self.__config = cast("Config[L, U, B]", self.__class__.GetDefaultConfig())
+        self.SetConfig(cast("PartialConfig[L, U, B]", self.__config))
 
     # ============
     # MISC HELPERS
@@ -699,7 +669,7 @@ class PreJsPy(Generic[L, U, B]):
 
     # Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
     # keep track of everything in the numeric literal and then calling `parseFloat` on that string
-    def __gobbleNumericLiteral(self) -> NumericLiteral:
+    def __gobbleNumericLiteral(self) -> "NumericLiteral":
         start = self.__index
 
         # gobble the number itself
@@ -755,7 +725,7 @@ class PreJsPy(Generic[L, U, B]):
 
     # Parses a string literal, staring with single or double quotes with basic support for escape codes
     # e.g. `"hello world"`, `'this is\nJSEP'`
-    def __gobbleStringLiteral(self) -> StringLiteral:
+    def __gobbleStringLiteral(self) -> "StringLiteral":
         s = ""
 
         index_start = self.__index
@@ -812,7 +782,7 @@ class PreJsPy(Generic[L, U, B]):
     # e.g.: `foo`, `_value`, `$x1`
     # Also, this function checks if that identifier is a literal:
     # (e.g. `true`, `false`, `null`)
-    def __gobbleIdentifier(self) -> Union[Literal[L], Identifier]:
+    def __gobbleIdentifier(self) -> "Union[Literal[L], Identifier]":
         # can't gobble an identifier if the first character isn't the start of one.
         ch = self.__charCode()
         if not PreJsPy.__isIdentifierStart(ch):
@@ -976,7 +946,7 @@ class PreJsPy(Generic[L, U, B]):
     # Responsible for parsing Array literals `[1, 2, 3]`
     # This function assumes that it needs to gobble the opening bracket
     # and then tries to gobble the expressions as arguments.
-    def __gobbleArray(self) -> Ary[L, U, B]:
+    def __gobbleArray(self) -> "Ary[L, U, B]":
         if not self.__config["Features"]["Literals"]["Array"]:
             self.__throw_error("Unexpected array literal")
 
@@ -988,7 +958,7 @@ class PreJsPy(Generic[L, U, B]):
         }
 
     @staticmethod
-    def GetDefaultConfig() -> Config[Any, str, str]:
+    def GetDefaultConfig() -> "Config[Any, str, str]":
         """Returns the default configuration"""
         return {
             "Operators": {

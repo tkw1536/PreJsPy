@@ -20,9 +20,22 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
         run: cd src/ts && yarn install --frozen-lockfile
+      - name: Run Tests
+        run:  cd src/ts && yarn ts-node test.ts
+  check:
+    name: 'Check Format & Types'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 19.x
+      - name: Install dependencies
+        run: cd src/ts && yarn install --frozen-lockfile
       - name: Check Formatting
         run: cd src/ts && yarn ts-standard ./PreJsPy.ts
       - name: Check Types
         run: cd src/ts && yarn tsc --noEmit ./PreJsPy.ts
-      - name: Run Tests
-        run:  cd src/ts && yarn ts-node test.ts

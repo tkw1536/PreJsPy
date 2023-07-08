@@ -4,7 +4,7 @@ on: ['push', 'pull_request']
 
 jobs:
   test:
-    name: 'Python ${{ matrix.python-version }}'
+    name: 'Test Python ${{ matrix.python-version }}'
 
     runs-on: ubuntu-latest
 
@@ -19,14 +19,25 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - name: Install dependencies
-        run: |
-          pip install black
-          pip install mypy
-          pip install typing_extensions
-      - name: Check Formatting
-        run: cd src/py && black --check PreJsPy.py
-      - name: Check Types
-        run: cd src/py && mypy PreJsPy.py
-      - name: Run Tests
+      - name: Run tests
         run: cd src/py && python test.py
+  check:
+    name: 'Check Format & Types'
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        architecture: x64
+    - name: Install dependencies
+      run: |
+        pip install black
+        pip install mypy
+    - name: Check Formatting
+      run: cd src/py && black --check PreJsPy.py
+    - name: Check Types
+      run: cd src/py && mypy PreJsPy.py
