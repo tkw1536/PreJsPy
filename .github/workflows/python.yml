@@ -19,4 +19,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - run: make pycheck
+      - name: Install dependencies
+        run: |
+          pip install black
+          pip install mypy
+      - name: Check Formatting
+        run: cd src/py && black --check PreJsPy.py
+      - name: Check Types
+        run: cd src/py && mypy PreJsPy.py
+      - name: Run Tests
+        run: cd src/py && python test.py

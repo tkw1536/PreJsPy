@@ -1,4 +1,4 @@
-name: Node.js Tests
+name: TypeScript Tests
 
 on: ['push', 'pull_request']
 
@@ -18,4 +18,11 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: make node
+      - name: Install dependencies
+        run: cd src/ts && yarn install --frozen-lockfile
+      - name: Check Formatting
+        run: cd src/ts && yarn ts-standard ./PreJsPy.ts
+      - name: Check Types
+        run: cd src/ts && yarn tsc --noEmit ./PreJsPy.ts
+      - name: Run Tests
+        run:  cd src/ts && yarn ts-node test.ts

@@ -74,17 +74,20 @@ class Literal(TypedDict, Generic[L]):
     value: L
     raw: str
 
+
 class StringLiteral(TypedDict):
     type: tLiteral["Literal"]
     kind: tLiteral["string"]
     value: str
     raw: str
 
+
 class NumericLiteral(TypedDict):
     type: tLiteral["Literal"]
     kind: tLiteral["number"]
     value: float
     raw: str
+
 
 class Call(TypedDict, Generic[L, U, B]):
     type: tLiteral["CallExpression"]

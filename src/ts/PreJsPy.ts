@@ -259,7 +259,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * @param {Record<K, V>} record
      * @return {Record<K, V>}
      */
-  private static copyDict<S extends string | number | symbol, T, U extends Record<S,T>>(dict: U): U {
+  private static copyDict<S extends string | number | symbol, T, U extends Record<S, T>>(dict: U): U {
     return { ...dict }
   }
 
@@ -476,7 +476,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     if (nodes.length === 1) {
       return nodes[0]
     }
-    
+
     // do not allow compound expressions if they are not enabled
     if (!this.config.Features.Compound) {
       this.throwError('Unexpected compound expression')
@@ -705,25 +705,25 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
    * Gobbles a contiguous sequence of decimal numbers, possibly separated with numeric separators.
    * The returned string does not include numeric separators.
    */
-  private gobbleDecimal(): string {
+  private gobbleDecimal (): string {
     // Fast path: No separator enabled case: no numeric separator
     const separator = this.config.Features.Literals.NumericSeparator
-    if (separator === "") {
+    if (separator === '') {
       const start = this.index
-      while(PreJsPy.isDecimalDigit(this.charCode())) {
+      while (PreJsPy.isDecimalDigit(this.charCode())) {
         this.index++
       }
       return this.expr.substring(start, this.index)
     }
 
     // slow path: need to check for separator
-    let number = ""
+    let number = ''
 
-    while(true) {
+    while (true) {
       if (PreJsPy.isDecimalDigit(this.charCode())) {
         number += this.char()
-      } else if(this.char() !== separator) {
-        break;
+      } else if (this.char() !== separator) {
+        break
       }
 
       this.index++
@@ -731,6 +731,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
     return number
   }
+
   /**
      * Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
      * keep track of everything in the numeric literal and then calling `parseFloat` on that string
@@ -762,7 +763,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
       }
 
       const exponent = this.gobbleDecimal()
-      if (exponent == "") {
+      if (exponent === '') {
         this.throwError('Expected exponent (' + number + this.char() + ')')
       }
 
@@ -789,14 +790,14 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
     // Parse the float value and get the literal (if needed)
     const value = parseFloat(number)
-    if (this.config.Features.Literals.NumericSeparator != '') {
+    if (this.config.Features.Literals.NumericSeparator !== '') {
       number = this.expr.substring(start, this.index)
     }
 
     return {
       type: LITERAL,
       kind: 'number',
-      value: value,
+      value,
       raw: number
     }
   }
@@ -1110,7 +1111,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         },
         Literals: {
           Numeric: true,
-          NumericSeparator: "",
+          NumericSeparator: '',
           String: true,
           Array: true
         }
