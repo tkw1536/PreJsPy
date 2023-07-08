@@ -144,6 +144,7 @@ class _PartialLiterals(TypedDict, total=False):
 
 
 class _Features(TypedDict):
+    Compound: bool
     Tertiary: bool
     Identifiers: bool
     Calls: bool
@@ -152,6 +153,7 @@ class _Features(TypedDict):
 
 
 class _PartialFeatures(TypedDict, total=False):
+    Compound: bool
     Tertiary: bool
     Identifiers: bool
     Calls: bool
@@ -268,7 +270,7 @@ class PreJsPy(Generic[L, U, B]):
     # CONFIG
     # =======
 
-    def getConfig(self) -> Config[L, U, B]:
+    def GetConfig(self) -> Config[L, U, B]:
         """Gets the current config used by this parser."""
         return {
             "Operators": {
@@ -277,6 +279,7 @@ class PreJsPy(Generic[L, U, B]):
                 "Binary": self.__config["Operators"]["Binary"].copy(),
             },
             "Features": {
+                "Compound": self.__config["Features"]["Compound"],
                 "Tertiary": self.__config["Features"]["Tertiary"],
                 "Identifiers": self.__config["Features"]["Identifiers"],
                 "Calls": self.__config["Features"]["Calls"],
@@ -285,7 +288,7 @@ class PreJsPy(Generic[L, U, B]):
             },
         }
 
-    def setConfig(self, config: Optional[PartialConfig[L, U, B]]) -> Config[L, U, B]:
+    def SetConfig(self, config: Optional[PartialConfig[L, U, B]]) -> Config[L, U, B]:
         """Sets the config used by this parser.
 
         :param config: (Possibly partial) configuration to use.
@@ -312,6 +315,10 @@ class PreJsPy(Generic[L, U, B]):
                         self.__config["Operators"]["Binary"]
                     )
             if "Features" in config:
+                if "Compound" in config["Features"]:
+                    self.__config["Features"]["Compound"] = config["Features"][
+                        "Compound"
+                    ]
                 if "Tertiary" in config["Features"]:
                     self.__config["Features"]["Tertiary"] = config["Features"][
                         "Tertiary"
@@ -346,7 +353,7 @@ class PreJsPy(Generic[L, U, B]):
                             "Features"
                         ]["Literals"]["String"]
 
-        return self.getConfig()
+        return self.GetConfig()
 
     # =========
     # INIT CODE
@@ -358,7 +365,7 @@ class PreJsPy(Generic[L, U, B]):
         """Creates a new PreJSPyParser instance."""
 
         self.__config = cast(Config[L, U, B], self.__class__.GetDefaultConfig())
-        self.setConfig(cast(PartialConfig[L, U, B], self.__config))
+        self.SetConfig(cast(PartialConfig[L, U, B], self.__config))
 
     # ============
     # MISC HELPERS
@@ -439,6 +446,10 @@ class PreJsPy(Generic[L, U, B]):
         # If there is only one expression, return it as is
         if len(nodes) == 1:
             return nodes[0]
+
+        # do not allow compound expressions if they are not enabled
+        if not self.__config["Features"]["Compound"]:
+            self.__throw_error('Unexpected compound expression')
 
         return {"type": COMPOUND, "body": nodes}
 
@@ -953,6 +964,7 @@ class PreJsPy(Generic[L, U, B]):
                 },
             },
             "Features": {
+                "Compound": True,
                 "Tertiary": True,
                 "Identifiers": True,
                 "Calls": True,

@@ -110,6 +110,7 @@ export interface Config<L extends boolean | null, U extends string, B extends st
   }
 
   Features: {
+    Compound: boolean
     Tertiary: boolean
     Identifiers: boolean
     Calls: boolean
@@ -127,20 +128,21 @@ export interface Config<L extends boolean | null, U extends string, B extends st
 
 export type PartialConfig<L extends boolean | null, U extends string, B extends string> = Partial<{
   Operators: Partial<Config<L, U, B>['Operators']>
-  Features: {
-    Tertiary?: boolean
-    Identifiers?: boolean
-    Calls?: boolean
-    Members?: Partial<{
+  Features: Partial<{
+    Compound: boolean
+    Tertiary: boolean
+    Identifiers: boolean
+    Calls: boolean
+    Members: Partial<{
       Static: boolean
       Computed: boolean
     }>
-    Literals?: Partial<{
+    Literals: Partial<{
       Numeric: boolean
       String: boolean
       Array: boolean
     }>
-  }
+  }>
 }>
 
 const COMPOUND = 'Compound'
@@ -271,6 +273,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         Binary: PreJsPy.copyDict(this.config.Operators.Binary)
       },
       Features: {
+        Compound: this.config.Features.Compound,
         Tertiary: this.config.Features.Tertiary,
         Identifiers: this.config.Features.Identifiers,
         Calls: this.config.Features.Calls,
@@ -305,6 +308,9 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         }
       }
       if (typeof config.Features === 'object') {
+        if (typeof config.Features.Compound === 'boolean') {
+          this.config.Features.Compound = config.Features.Compound
+        }
         if (typeof config.Features.Tertiary === 'boolean') {
           this.config.Features.Tertiary = config.Features.Tertiary
         }
@@ -448,6 +454,11 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     // If there's only one expression just try returning the expression
     if (nodes.length === 1) {
       return nodes[0]
+    }
+    
+    // do not allow compound expressions if they are not enabled
+    if (!this.config.Features.Compound) {
+      this.throwError('Unexpected compound expression')
     }
 
     return {
@@ -1035,6 +1046,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
       },
 
       Features: {
+        Compound: true,
         Tertiary: true,
         Identifiers: true,
         Calls: true,
