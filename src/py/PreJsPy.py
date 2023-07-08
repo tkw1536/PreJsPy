@@ -39,7 +39,7 @@ ARRAY_EXP: Final = "ArrayExpression"
 
 Expression: TypeAlias = Union[
     "Compound[L,U,B]",
-    "Identifier[L,U,B]",
+    "Identifier",
     "Member[L,U,B]",
     "Literal[L]",
     "StringLiteral",
@@ -57,7 +57,7 @@ class Compound(TypedDict, Generic[L, U, B]):
     body: List["Expression[L,U,B]"]
 
 
-class Identifier(TypedDict, Generic[L, U, B]):
+class Identifier(TypedDict):
     type: tLiteral["Identifier"]
     name: str
 
@@ -76,16 +76,15 @@ class Literal(TypedDict, Generic[L]):
 
 class StringLiteral(TypedDict):
     type: tLiteral["Literal"]
-    kind: "string"
+    kind: tLiteral["string"]
     value: str
     raw: str
 
 class NumericLiteral(TypedDict):
     type: tLiteral["Literal"]
-    kind: "number"
+    kind: tLiteral["number"]
     value: float
     raw: str
-
 
 class Call(TypedDict, Generic[L, U, B]):
     type: tLiteral["CallExpression"]
@@ -791,7 +790,7 @@ class PreJsPy(Generic[L, U, B]):
     # e.g.: `foo`, `_value`, `$x1`
     # Also, this function checks if that identifier is a literal:
     # (e.g. `true`, `false`, `null`)
-    def __gobbleIdentifier(self) -> Union[Literal[L], Identifier[L, U, B]]:
+    def __gobbleIdentifier(self) -> Union[Literal[L], Identifier]:
         # can't gobble an identifier if the first character isn't the start of one.
         ch = self.__charCode()
         if not PreJsPy.__isIdentifierStart(ch):
