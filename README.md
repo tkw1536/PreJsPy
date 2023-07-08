@@ -7,7 +7,7 @@
 ## What is this?
 
 PreJsPy is highly configurable a precedence-based parser written in both
-Python (3.8+) and JavaScript (ES5+). The default grammar is based on a
+Python (3.8+), JavaScript (ES5+) and other languages. The default grammar is based on a
 subset of JavaScript but can be adapted to a lot of different scenarios.
 
 ```python
@@ -83,24 +83,24 @@ differences come from the features of the languages themselves.
 var PreJsPy = require('pre-js-py').PreJsPy;
 
 var parser = new PreJsPy(); // creates a new parser
-var ast = parser.parse(s); // parses a string into a AST.
+var ast = parser.Parse(s); // parses a string into a AST.
 
-var config = parser.getConfig(); // returns a configuration object of the parser.
+var config = parser.GetConfig(); // returns a configuration object of the parser.
 parser.setConfig(config); // sets configuration of the parser. May be partial.
 
-PreJsPy.getDefaultConfig(); // returns the default configuration for new parsers.
+PreJsPy.GetDefaultConfig(); // returns the default configuration for new parsers.
 ```
 
 ``` python
 from PreJsPy import PreJsPy
 
 parser = PreJsPy() # creates a new parser.
-ast = parser.parse(s) # parses a string into a AST,
+ast = parser.Parse(s) # parses a string into a AST,
 
-config = parser.getConfig() # returns a configuration object of the parser.
-parser.setConfig(config) # sets configuration of the parser. May be partial.
+config = parser.GetConfig() # returns a configuration object of the parser.
+parser.SetConfig(config) # sets configuration of the parser. May be partial.
 
-PreJsPy.getDefaultConfig() # returns the default configuration for new parsers
+PreJsPy.GetDefaultConfig() # returns the default configuration for new parsers
 ```
 
 Configuration passed to and from returned from `getConfig` configures the desired features of the parser.
@@ -111,8 +111,7 @@ The default configuration (which explanations) is found below:
 
 ```json
 {
-   // Operators supported by the parser.
-   // These can be configured individually.
+   // Operators supported by the browser
    "Operators": {
       // The set of literals (i.e. constants) recognized by the parser.
       // Note that these cannot be used as identifiers.
@@ -151,9 +150,11 @@ The default configuration (which explanations) is found below:
       }
    },
 
-   // Enable and disable specific features.
+   // Enable, disable and customize features.
    "Features": {
-         // The tertiary operators "a ? b : c".
+      // Top-level comound expressions
+      "Compound": true,
+      // The tertiary operators "a ? b : c".
       "Tertiary": true,
       // Non-constant, non-quoted identifiers in the code.
       "Identifiers": true,
@@ -168,6 +169,9 @@ The default configuration (which explanations) is found below:
       "Literals": {
             // Numeric literals like "1.2"
             "Numeric": true,
+            // An additional separator that can be included in numeric literals.
+            // For example, "_" would allow numbers like "1_000_000".
+            "NumericSeparator": "",
             // String literals, enclosed in double quotes.
             "String": true,
             // Array literals, like "[1,2,3]"
