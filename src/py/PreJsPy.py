@@ -15,11 +15,30 @@ from typing import (
     Literal as tLiteral,
     Optional,
     cast,
-    TypeAlias,
-    TypedDict,
     TypeVar,
     NoReturn,
 )
+
+try:
+    from typing import TypeAlias
+except ImportError:
+    try:
+        from typing_extensions import TypeAlias
+    except ImportError:
+        TypeAlias = Any
+
+
+try:
+    from typing import TypedDict
+except ImportError:
+    try:
+        from typing_extensions import TypedDict
+    except ImportError:
+
+        class TypedDict(object):  # type: ignore[no-redef]
+            def __init_subclass__(cls, *args, total=True, **kwargs):
+                super().__init_subclass__(*args, **kwargs)
+
 
 L = TypeVar("L")
 U = TypeVar("U", bound=str)

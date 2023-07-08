@@ -23,6 +23,7 @@ jobs:
         run: |
           pip install black
           pip install mypy
+          pip install typing_extensions
       - name: Check Formatting
         run: cd src/py && black --check PreJsPy.py
       - name: Check Types
