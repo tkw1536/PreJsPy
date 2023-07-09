@@ -10,6 +10,7 @@ from typing import (
     Generic,
     Dict,
     List,
+    Tuple,
     Union,
     Final,
     Literal as tLiteral,
@@ -178,6 +179,26 @@ if TYPE_CHECKING:
         Features: _PartialFeatures
 
 
+class ParsingError(Exception):
+    error: str
+    expr: str
+    index: int
+
+    def __init__(self, error: str, expr: str, index: int):
+        """
+        Creates a new ParsingError.
+
+        :param error: Error message produced by the parser
+        :param expr: Expression that was originally parsed
+        :param index: Index of position in the expression where the error occurred
+        """
+        self.error = error
+        self.expr = expr
+        self.index = index
+
+        super().__init__("Index " + str(index) + " of " + repr(expr) + ": " + error)
+
+
 class PreJsPy(Generic[L, U, B]):
     """Represents a single instance of the PreJSPy Parser."""
 
@@ -199,14 +220,13 @@ class PreJsPy(Generic[L, U, B]):
     # =======================
     # STATIC HELPER FUNCTIONS
     # =======================
-    def __throw_error(self, msg: str) -> NoReturn:
+    def __throw_error(self, error: str) -> NoReturn:
         """Throws a parser error with a given message and a given index.
 
-        :param msg: Message of error to throw.
+        :param error: Message of error to throw.
         :param index: Character index at which the error should be thrown.
         """
-        msg = "{} at character {}".format(msg, self.__index)
-        raise Exception(msg)
+        raise ParsingError(error, self.__expr, self.__index)
 
     @staticmethod
     def __getMaxKeyLen(o: Dict[B, int]) -> int:
@@ -430,6 +450,15 @@ class PreJsPy(Generic[L, U, B]):
             self.__index = 0
             self.__expr = ""
             self.__length = 0
+
+    def TryParse(
+        self, expr: str
+    ) -> "Union[Tuple[Expression[L, U, B], None],Tuple[None, ParsingError]]":
+        try:
+            result = self.Parse(expr)
+            return result, None
+        except ParsingError as pe:
+            return None, pe
 
     def __gobbleCompound(self) -> "Expression[L,U,B]":
         """Gobbles a single or compound expression"""
