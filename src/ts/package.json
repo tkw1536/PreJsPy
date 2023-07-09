@@ -1,11 +1,11 @@
 {
   "name": "pre-js-py",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "Highly configurable precedence-based parser written in both Python and JavaScript",
-  "main": "PreJsPy.js",
-  "types": "PreJsPy.d.ts",
+  "main": "./dist/PreJsPy.js",
+  "types": "./dist/PreJsPy.d.ts",
   "scripts": {
-    "test": "node test.js"
+    "test": "ts-node test.ts"
   },
   "repository": {
     "type": "git",

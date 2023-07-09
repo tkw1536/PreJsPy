@@ -174,17 +174,20 @@ const CONDITIONAL_EXP = 'ConditionalExpression'
 const ARRAY_EXP = 'ArrayExpression'
 
 // LIST OF CHAR CODES
-const PERIOD_CODE = 46 // '.'
-const COMMA_CODE = 44 // ','
-const SQUOTE_CODE = 39 // single quote
-const DQUOTE_CODE = 34 // double quotes
-const OPAREN_CODE = 40 // (
-const CPAREN_CODE = 41 // )
-const OBRACK_CODE = 91 // [
-const CBRACK_CODE = 93 // ]
-const QUMARK_CODE = 63 // ?
-const SEMCOL_CODE = 59 // ;
-const COLON_CODE = 58 // :
+function ord(input: string): number {
+  return input.charCodeAt(0)
+}
+const PERIOD_CODE = ord('.') // '.'
+const COMMA_CODE = ord(',') // ','
+const SQUOTE_CODE = ord('\'') // single quote
+const DQUOTE_CODE = ord('"') // double quotes
+const OPAREN_CODE = ord('(') // (
+const CPAREN_CODE = ord(')') // )
+const OBRACK_CODE = ord('[') // [
+const CBRACK_CODE = ord(']') // ]
+const QUMARK_CODE = ord('?') // ?
+const SEMCOL_CODE = ord(';') // ;
+const COLON_CODE = ord(':') // :
 
 /** ParsingResult represents a result from parsing */
 type ParsingResult<T> = [T, null] | [null, ParsingError]
