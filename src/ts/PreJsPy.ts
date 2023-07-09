@@ -48,70 +48,70 @@ class ParsingError extends Error {
 }
 
 interface Compound<L, U extends string, B extends string> {
-  type: 'Compound'
+  type: ExpressionType.COMPOUND
   body: Array<Expression<L, U, B>>
 }
 
 interface Identifier {
-  type: 'Identifier'
+  type: ExpressionType.IDENTIFIER
   name: string
 }
 
 interface Member<L, U extends string, B extends string> {
-  type: 'MemberExpression'
+  type: ExpressionType.MEMBER_EXP
   computed: boolean
   object: Expression<L, U, B>
   property: Expression<L, U, B>
 }
 
 interface Literal<L> {
-  type: 'Literal'
+  type: ExpressionType.LITERAL
   value: L
   raw: string
 }
 
 interface StringLiteral {
-  type: 'Literal'
+  type: ExpressionType.LITERAL
   kind: 'string'
   value: string
   raw: string
 }
 
 interface NumericLiteral {
-  type: 'Literal'
+  type: ExpressionType.LITERAL
   kind: 'number'
   value: number
   raw: string
 }
 
 interface Call<L, U extends string, B extends string> {
-  type: 'CallExpression'
+  type: ExpressionType.CALL_EXP
   arguments: Array<Expression<L, U, B>>
   callee: Expression<L, U, B>
 }
 
 interface Unary<L, U extends string, B extends string> {
-  type: 'UnaryExpression'
+  type: ExpressionType.UNARY_EXP
   operator: U
   argument: Expression<L, U, B>
 }
 
 interface Binary<L, U extends string, B extends string> {
-  type: 'BinaryExpression'
+  type: ExpressionType.BINARY_EXP
   operator: B
   left: Expression<L, U, B>
   right: Expression<L, U, B>
 }
 
 interface Condition<L, U extends string, B extends string> {
-  type: 'ConditionalExpression'
+  type: ExpressionType.CONDITIONAL_EXP
   test: Expression<L, U, B>
   consequent: Expression<L, U, B>
   alternate: Expression<L, U, B>
 }
 
 interface Ary<L, U extends string, B extends string> {
-  type: 'ArrayExpression'
+  type: ExpressionType.ARRAY_EXP
   elements: Array<Expression<L, U, B>>
 }
 
@@ -163,15 +163,18 @@ export type PartialConfig<L extends boolean | null, U extends string, B extends 
   }>
 }>
 
-const COMPOUND = 'Compound'
-const IDENTIFIER = 'Identifier'
-const MEMBER_EXP = 'MemberExpression'
-const LITERAL = 'Literal'
-const CALL_EXP = 'CallExpression'
-const UNARY_EXP = 'UnaryExpression'
-const BINARY_EXP = 'BinaryExpression'
-const CONDITIONAL_EXP = 'ConditionalExpression'
-const ARRAY_EXP = 'ArrayExpression'
+/** Represents the type of expressions */
+export enum ExpressionType {
+  COMPOUND = 'Compound',
+  IDENTIFIER = 'Identifier',
+  MEMBER_EXP = 'MemberExpression',
+  LITERAL = 'Literal',
+  CALL_EXP = 'CallExpression',
+  UNARY_EXP = 'UnaryExpression',
+  BINARY_EXP = 'BinaryExpression',
+  CONDITIONAL_EXP = 'ConditionalExpression',
+  ARRAY_EXP = 'ArrayExpression',
+}
 
 // LIST OF CHAR CODES
 function ord (input: string): number {
@@ -488,7 +491,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     }
 
     return {
-      type: COMPOUND,
+      type: ExpressionType.COMPOUND,
       body: nodes
     }
   }
@@ -547,7 +550,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     }
 
     return {
-      type: CONDITIONAL_EXP,
+      type: ExpressionType.CONDITIONAL_EXP,
       test,
       consequent,
       alternate
@@ -623,7 +626,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         }
 
         exprs.push({
-          type: BINARY_EXP,
+          type: ExpressionType.BINARY_EXP,
           operator: op.value,
           left,
           right
@@ -646,7 +649,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     let node = exprs[i]
     while ((i > 0) && (j >= 0)) {
       node = {
-        type: BINARY_EXP,
+        type: ExpressionType.BINARY_EXP,
         operator: ops[j].value,
         left: exprs[i - 1],
         right: node
@@ -685,7 +688,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         }
 
         return {
-          type: UNARY_EXP,
+          type: ExpressionType.UNARY_EXP,
           operator: candidate as U,
           argument
         }
@@ -797,7 +800,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     }
 
     return {
-      type: LITERAL,
+      type: ExpressionType.LITERAL,
       kind: 'number',
       value,
       raw: number
@@ -875,7 +878,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     }
 
     return {
-      type: LITERAL,
+      type: ExpressionType.LITERAL,
       kind: 'string',
       value: str,
       raw: quote + str + quote // TODO: Does this need fixing
@@ -908,7 +911,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
     if (Object.prototype.hasOwnProperty.call(this.config.Operators.Literals, identifier)) {
       return {
-        type: LITERAL,
+        type: ExpressionType.LITERAL,
         value: this.config.Operators.Literals[identifier],
         raw: identifier
       }
@@ -918,7 +921,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
       this.throwError('Unknown literal "' + identifier + '"')
     }
     return {
-      type: IDENTIFIER,
+      type: ExpressionType.IDENTIFIER,
       name: identifier
     }
   }
@@ -947,7 +950,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
       }
 
       const node = this.gobbleExpression()
-      if (node === null || node.type === COMPOUND) {
+      if (node === null || node.type === ExpressionType.COMPOUND) {
         this.throwError('Expected comma')
       }
       args.push(node)
@@ -980,7 +983,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         }
         this.gobbleSpaces()
         node = {
-          type: MEMBER_EXP,
+          type: ExpressionType.MEMBER_EXP,
           computed: false,
           object: node,
           property: this.gobbleIdentifier()
@@ -995,7 +998,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         }
 
         node = {
-          type: MEMBER_EXP,
+          type: ExpressionType.MEMBER_EXP,
           computed: true,
           object: node,
           property
@@ -1014,7 +1017,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
         // A function call is being made; gobble all the arguments
         node = {
-          type: CALL_EXP,
+          type: ExpressionType.CALL_EXP,
           arguments: this.gobbleArguments(CODE_CLOSE_PARENTHESES),
           callee: node
         }
@@ -1060,7 +1063,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     this.index++
 
     return {
-      type: ARRAY_EXP,
+      type: ExpressionType.ARRAY_EXP,
       elements: this.gobbleArguments(CODE_CLOSE_BRACKET)
     }
   }

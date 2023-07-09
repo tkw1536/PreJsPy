@@ -21,16 +21,22 @@ from typing import (
     NoReturn,
 )
 
+from enum import Enum
 
-COMPOUND: Final = "Compound"
-IDENTIFIER: Final = "Identifier"
-MEMBER_EXP: Final = "MemberExpression"
-LITERAL: Final = "Literal"
-CALL_EXP: Final = "CallExpression"
-UNARY_EXP: Final = "UnaryExpression"
-BINARY_EXP: Final = "BinaryExpression"
-CONDITIONAL_EXP: Final = "ConditionalExpression"
-ARRAY_EXP: Final = "ArrayExpression"
+
+class ExpressionType(str, Enum):
+    """Represents the type of expressions"""
+
+    COMPOUND = "Compound"
+    IDENTIFIER = "Identifier"
+    MEMBER_EXP = "MemberExpression"
+    LITERAL = "Literal"
+    CALL_EXP = "CallExpression"
+    UNARY_EXP = "UnaryExpression"
+    BINARY_EXP = "BinaryExpression"
+    CONDITIONAL_EXP = "ConditionalExpression"
+    ARRAY_EXP = "ArrayExpression"
+
 
 L = TypeVar("L")
 U = TypeVar("U", bound=str)
@@ -62,60 +68,60 @@ if TYPE_CHECKING:
     ]
 
     class Compound(TypedDict, Generic[L, U, B]):
-        type: tLiteral["Compound"]
+        type: tLiteral[ExpressionType.COMPOUND]
         body: List["Expression[L,U,B]"]
 
     class Identifier(TypedDict):
-        type: tLiteral["Identifier"]
+        type: tLiteral[ExpressionType.IDENTIFIER]
         name: str
 
     class Member(TypedDict, Generic[L, U, B]):
-        type: tLiteral["MemberExpression"]
+        type: tLiteral[ExpressionType.MEMBER_EXP]
         computed: bool
         object: "Expression[L,U,B]"
         property: "Expression[L,U,B]"
 
     class Literal(TypedDict, Generic[L]):
-        type: tLiteral["Literal"]
+        type: tLiteral[ExpressionType.LITERAL]
         value: L
         raw: str
 
     class StringLiteral(TypedDict):
-        type: tLiteral["Literal"]
+        type: tLiteral[ExpressionType.LITERAL]
         kind: tLiteral["string"]
         value: str
         raw: str
 
     class NumericLiteral(TypedDict):
-        type: tLiteral["Literal"]
+        type: tLiteral[ExpressionType.LITERAL]
         kind: tLiteral["number"]
         value: float
         raw: str
 
     class Call(TypedDict, Generic[L, U, B]):
-        type: tLiteral["CallExpression"]
+        type: tLiteral[ExpressionType.CALL_EXP]
         arguments: List["Expression[L,U,B]"]
         callee: "Expression[L,U,B]"
 
     class Unary(TypedDict, Generic[L, U, B]):
-        type: tLiteral["UnaryExpression"]
+        type: tLiteral[ExpressionType.UNARY_EXP]
         operator: U
         argument: "Expression[L,U,B]"
 
     class Binary(TypedDict, Generic[L, U, B]):
-        type: tLiteral["BinaryExpression"]
+        type: tLiteral[ExpressionType.BINARY_EXP]
         operator: B
         left: "Expression[L,U,B]"
         right: "Expression[L,U,B]"
 
     class Condition(TypedDict, Generic[L, U, B]):
-        type: tLiteral["ConditionalExpression"]
+        type: tLiteral[ExpressionType.CONDITIONAL_EXP]
         test: "Expression[L,U,B]"
         consequent: "Expression[L,U,B]"
         alternate: "Expression[L,U,B]"
 
     class Ary(TypedDict, Generic[L, U, B]):
-        type: tLiteral["ArrayExpression"]
+        type: tLiteral[ExpressionType.ARRAY_EXP]
         elements: List["Expression[L,U,B]"]
 
     class _BinaryOperatorInfo(TypedDict, Generic[B]):
@@ -491,7 +497,7 @@ class PreJsPy(Generic[L, U, B]):
         if not self.__config["Features"]["Compound"]:
             self.__throw_error("Unexpected compound expression")
 
-        return {"type": COMPOUND, "body": nodes}
+        return {"type": ExpressionType.COMPOUND, "body": nodes}
 
     def __gobbleSpaces(self) -> None:
         """Push `index` up to the next non-space character"""
@@ -539,7 +545,7 @@ class PreJsPy(Generic[L, U, B]):
             self.__throw_error("Expected expression")
 
         return {
-            "type": CONDITIONAL_EXP,
+            "type": ExpressionType.CONDITIONAL_EXP,
             "test": test,
             "consequent": consequent,
             "alternate": alternate,
@@ -601,7 +607,7 @@ class PreJsPy(Generic[L, U, B]):
                 op = ops.pop()
                 exprs.append(
                     {
-                        "type": BINARY_EXP,
+                        "type": ExpressionType.BINARY_EXP,
                         "operator": op["value"],
                         "left": left,
                         "right": right,
@@ -622,7 +628,7 @@ class PreJsPy(Generic[L, U, B]):
         node = exprs[i]
         while i > 0 and j >= 0:
             node = {
-                "type": BINARY_EXP,
+                "type": ExpressionType.BINARY_EXP,
                 "operator": ops[j]["value"],
                 "left": exprs[i - 1],
                 "right": node,
@@ -661,7 +667,7 @@ class PreJsPy(Generic[L, U, B]):
                     self.__throw_error("Expected argument to unary expression")
 
                 return {
-                    "type": UNARY_EXP,
+                    "type": ExpressionType.UNARY_EXP,
                     "operator": cast(U, to_check),
                     "argument": argument,
                 }
@@ -752,7 +758,12 @@ class PreJsPy(Generic[L, U, B]):
         if self.__config["Features"]["Literals"]["NumericSeparator"] != "":
             number = self.__expr[start : self.__index]
 
-        return {"type": LITERAL, "kind": "number", "value": value, "raw": number}
+        return {
+            "type": ExpressionType.LITERAL,
+            "kind": "number",
+            "value": value,
+            "raw": number,
+        }
 
     # Parses a string literal, staring with single or double quotes with basic support for escape codes
     # e.g. `"hello world"`, `'this is\nJSEP'`
@@ -807,7 +818,12 @@ class PreJsPy(Generic[L, U, B]):
             self.__index = index_start
             self.__throw_error("Unexpected string literal")
 
-        return {"type": LITERAL, "kind": "string", "value": s, "raw": quote + s + quote}
+        return {
+            "type": ExpressionType.LITERAL,
+            "kind": "string",
+            "value": s,
+            "raw": quote + s + quote,
+        }
 
     # Gobbles only identifiers
     # e.g.: `foo`, `_value`, `$x1`
@@ -835,7 +851,7 @@ class PreJsPy(Generic[L, U, B]):
         identifier = self.__expr[start : self.__index]
         if identifier in self.__config["Operators"]["Literals"]:
             return {
-                "type": LITERAL,
+                "type": ExpressionType.LITERAL,
                 "value": self.__config["Operators"]["Literals"][identifier],
                 "raw": identifier,
             }
@@ -845,7 +861,7 @@ class PreJsPy(Generic[L, U, B]):
             self.__throw_error('Unknown literal "' + identifier + '"')
 
         # found the identifier
-        return {"type": IDENTIFIER, "name": identifier}
+        return {"type": ExpressionType.IDENTIFIER, "name": identifier}
 
     # Gobbles a list of arguments within the context of a function call
     # or array literal. This function also assumes that the opening character
@@ -872,7 +888,7 @@ class PreJsPy(Generic[L, U, B]):
 
             node = self.__gobbleExpression()
 
-            if (node is None) or node["type"] == COMPOUND:
+            if (node is None) or node["type"] == ExpressionType.COMPOUND:
                 self.__throw_error("Expected comma")
 
             args.append(node)
@@ -914,7 +930,7 @@ class PreJsPy(Generic[L, U, B]):
                 self.__gobbleSpaces()
 
                 node = {
-                    "type": MEMBER_EXP,
+                    "type": ExpressionType.MEMBER_EXP,
                     "computed": False,
                     "object": node,
                     "property": self.__gobbleIdentifier(),
@@ -928,7 +944,7 @@ class PreJsPy(Generic[L, U, B]):
                     self.__throw_error("Expected expression")
 
                 node = {
-                    "type": MEMBER_EXP,
+                    "type": ExpressionType.MEMBER_EXP,
                     "computed": True,
                     "object": node,
                     "property": prop,
@@ -947,7 +963,7 @@ class PreJsPy(Generic[L, U, B]):
                     self.__throw_error("Unexpected function call")
                 # A function call is being made; gobble all the arguments
                 node = {
-                    "type": CALL_EXP,
+                    "type": ExpressionType.CALL_EXP,
                     "arguments": self.__gobbleArguments(PreJsPy.CODE_CLOSE_PARENTHESES),
                     "callee": node,
                 }
@@ -984,7 +1000,7 @@ class PreJsPy(Generic[L, U, B]):
         self.__index += 1
 
         return {
-            "type": ARRAY_EXP,
+            "type": ExpressionType.ARRAY_EXP,
             "elements": self.__gobbleArguments(PreJsPy.CODE_CLOSE_BRACKET),
         }
 
