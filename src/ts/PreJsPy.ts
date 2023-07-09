@@ -174,20 +174,22 @@ const CONDITIONAL_EXP = 'ConditionalExpression'
 const ARRAY_EXP = 'ArrayExpression'
 
 // LIST OF CHAR CODES
-function ord(input: string): number {
+function ord (input: string): number {
   return input.charCodeAt(0)
 }
-const PERIOD_CODE = ord('.') // '.'
-const COMMA_CODE = ord(',') // ','
-const SQUOTE_CODE = ord('\'') // single quote
-const DQUOTE_CODE = ord('"') // double quotes
-const OPAREN_CODE = ord('(') // (
-const CPAREN_CODE = ord(')') // )
-const OBRACK_CODE = ord('[') // [
-const CBRACK_CODE = ord(']') // ]
-const QUMARK_CODE = ord('?') // ?
-const SEMCOL_CODE = ord(';') // ;
-const COLON_CODE = ord(':') // :
+const CODE_PERIOD = ord('.')
+const CODE_COMMA = ord(',')
+const CODE_SINGLE_QUOTE = ord('\'')
+const CODE_DOUBLE_QUOTE = ord('"')
+const CODE_OPEN_PARENTHESES = ord('(')
+const CODE_CLOSE_PARENTHESES = ord(')')
+const CODE_OPEN_BRACKET = ord('[')
+const CODE_CLOSE_BRACKET = ord(']')
+const CODE_QUESTIONMARK = ord('?')
+const CODE_SEMICOLON = ord(';')
+const CODE_COLON = ord(':')
+const CODE_SPACE = ord(' ')
+const CODE_TAB = ord('\t')
 
 /** ParsingResult represents a result from parsing */
 type ParsingResult<T> = [T, null] | [null, ParsingError]
@@ -230,8 +232,8 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
   /**
      * Checks if a character is the start of an identifier.
-     * @param ch {number} Code of character to check.
-     * @returns {boolean}
+     * @param ch Code of character to check.
+     * @returns
      */
   private static isIdentifierStart (ch: number): boolean {
     return (ch === 36) || (ch === 95) || // `$` and `_`
@@ -305,8 +307,8 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
   }
 
   readonly config: Config<L, U, B>
-  private max_unop_len = 0
-  private max_binop_len = 0
+  private unaryOperatorLength = 0
+  private binaryOperatorLength = 0
 
   /**
      * Set the configuration of this parser.
@@ -321,11 +323,11 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         }
         if (config.Operators.Unary != null) {
           this.config.Operators.Unary = PreJsPy.copyList(config.Operators.Unary)
-          this.max_unop_len = PreJsPy.getMaxMemLen(this.config.Operators.Unary)
+          this.unaryOperatorLength = PreJsPy.getMaxMemLen(this.config.Operators.Unary)
         }
         if (config.Operators.Binary != null) {
           this.config.Operators.Binary = PreJsPy.copyDict(config.Operators.Binary)
-          this.max_binop_len = PreJsPy.getMaxKeyLen(this.config.Operators.Binary)
+          this.binaryOperatorLength = PreJsPy.getMaxKeyLen(this.config.Operators.Binary)
         }
       }
       if (typeof config.Features === 'object') {
@@ -456,7 +458,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
       // Expressions can be separated by semicolons, commas, or just inferred without any
       // separators
-      if (cc === SEMCOL_CODE || cc === COMMA_CODE) {
+      if (cc === CODE_SEMICOLON || cc === CODE_COMMA) {
         this.index++ // ignore separators
         continue
       }
@@ -497,7 +499,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
   private gobbleSpaces (): void {
     while (true) {
       const ch = this.charCode()
-      if (!(ch === 32 || ch === 9)) {
+      if (!(ch === CODE_SPACE || ch === CODE_TAB)) {
         break
       }
       this.index++
@@ -520,7 +522,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     this.gobbleSpaces()
 
     // didn't actually get a ternary expression
-    if (test === null || this.charCode() !== QUMARK_CODE) {
+    if (test === null || this.charCode() !== CODE_QUESTIONMARK) {
       return test
     }
 
@@ -534,7 +536,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     }
 
     this.gobbleSpaces()
-    if (this.charCode() !== COLON_CODE) {
+    if (this.charCode() !== CODE_COLON) {
       this.throwError('Expected :')
     }
 
@@ -563,15 +565,12 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
   private gobbleBinaryOp (): B | null {
     this.gobbleSpaces()
 
-    let candidate = this.expr.substring(this.index, this.index + this.max_binop_len)
-    let candidateLength = candidate.length
-    while (candidateLength > 0) {
+    for (let candidateLength = this.binaryOperatorLength; candidateLength > 0; candidateLength--) {
+      const candidate = this.expr.substring(this.index, this.index + candidateLength)
       if (Object.prototype.hasOwnProperty.call(this.config.Operators.Binary, candidate)) {
         this.index += candidateLength
         return candidate as B
       }
-      candidateLength--
-      candidate = candidate.substring(0, candidateLength)
     }
     return null
   }
@@ -582,37 +581,37 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     // First, try to get the leftmost thing
     // Then, check to see if there's a binary operator operating on that leftmost thing
     const left = this.gobbleToken()
-    const biop = this.gobbleBinaryOp()
+    const binaryOperator = this.gobbleBinaryOp()
 
     // If there wasn't a binary operator, just return the leftmost node
-    if (biop === null || left === null) {
+    if (binaryOperator === null || left === null) {
       return left
     }
 
     const right = this.gobbleToken()
     if (right === null) {
-      this.throwError('Expected expression after ' + biop)
+      this.throwError('Expected expression after ' + binaryOperator)
     }
 
     // Create a stack of expressions and information about the operators between them
     const exprs = [left, right]
     const ops = [
-      { value: biop, prec: this.binaryPrecedence(biop) }
+      { value: binaryOperator, precedence: this.binaryPrecedence(binaryOperator) }
     ]
 
     // Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
     while (true) {
-      const biop = this.gobbleBinaryOp()
-      if (biop === null) {
+      const binaryOperator = this.gobbleBinaryOp()
+      if (binaryOperator === null) {
         break
       }
 
-      const prec = this.binaryPrecedence(biop)
-      if (prec === 0) {
+      const precedence = this.binaryPrecedence(binaryOperator)
+      if (precedence === 0) {
         break
       }
 
-      while ((ops.length > 0) && (prec < ops[ops.length - 1].prec)) {
+      while ((ops.length > 0) && (precedence < ops[ops.length - 1].precedence)) {
         const right = exprs.pop()
         const left = exprs.pop()
         const op = ops.pop()
@@ -634,11 +633,11 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
       const node = this.gobbleToken()
       if (node === null) {
-        this.throwError('Expected expression after ' + biop)
+        this.throwError('Expected expression after ' + binaryOperator)
       }
       exprs.push(node)
 
-      ops.push({ value: biop, prec })
+      ops.push({ value: binaryOperator, precedence })
     }
 
     let i = exprs.length - 1
@@ -664,17 +663,17 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     this.gobbleSpaces()
     const ch = this.charCode()
 
-    if (PreJsPy.isDecimalDigit(ch) || ch === PERIOD_CODE) {
+    if (PreJsPy.isDecimalDigit(ch) || ch === CODE_PERIOD) {
       // Char code 46 is a dot `.` which can start off a numeric literal
       return this.gobbleNumericLiteral()
-    } else if (ch === SQUOTE_CODE || ch === DQUOTE_CODE) {
+    } else if (ch === CODE_SINGLE_QUOTE || ch === CODE_DOUBLE_QUOTE) {
       // Single or double quotes
       return this.gobbleStringLiteral()
-    } else if (ch === OBRACK_CODE) {
+    } else if (ch === CODE_OPEN_BRACKET) {
       return this.gobbleArray()
     }
 
-    let candidate = this.expr.substring(this.index, this.index + this.max_unop_len)
+    let candidate = this.expr.substring(this.index, this.index + this.unaryOperatorLength)
     let candidateLength = candidate.length
     while (candidateLength > 0) {
       if (this.config.Operators.Unary.includes(candidate as U)) {
@@ -696,7 +695,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
       candidate = candidate.substring(0, candidateLength)
     }
 
-    if (PreJsPy.isIdentifierStart(ch) || ch === OPAREN_CODE) { // open parenthesis
+    if (PreJsPy.isIdentifierStart(ch) || ch === CODE_OPEN_PARENTHESES) { // open parenthesis
       // `foo`, `bar.baz`
       return this.gobbleVariable()
     }
@@ -745,7 +744,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     // gobble the number itself
     let number = this.gobbleDecimal()
 
-    if (this.charCode() === PERIOD_CODE) { // can start with a decimal marker
+    if (this.charCode() === CODE_PERIOD) { // can start with a decimal marker
       number += '.'
       this.index++
 
@@ -782,7 +781,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     }
 
     // can't contain another period.
-    if (chCode === PERIOD_CODE) {
+    if (chCode === CODE_PERIOD) {
       this.throwError('Unexpected period')
     }
 
@@ -942,7 +941,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         break
       }
 
-      if (cc === COMMA_CODE) { // between expressions
+      if (cc === CODE_COMMA) { // between expressions
         this.index++
         continue
       }
@@ -965,7 +964,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      */
   private gobbleVariable (): Expression<L, U, B> | null {
     // parse a group or identifier first
-    let node: Expression<L, U, B> | null = (this.charCode() === OPAREN_CODE) ? this.gobbleGroup() : this.gobbleIdentifier()
+    let node: Expression<L, U, B> | null = (this.charCode() === CODE_OPEN_PARENTHESES) ? this.gobbleGroup() : this.gobbleIdentifier()
     if (node === null) {
       return null
     }
@@ -973,9 +972,9 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
     // then iterate accessor calls
     let cc = this.charCode()
-    while (cc === PERIOD_CODE || cc === OBRACK_CODE || cc === OPAREN_CODE) {
+    while (cc === CODE_PERIOD || cc === CODE_OPEN_BRACKET || cc === CODE_OPEN_PARENTHESES) {
       this.index++
-      if (cc === PERIOD_CODE) {
+      if (cc === CODE_PERIOD) {
         if (!this.config.Features.Members.Static) {
           this.throwError('Unexpected static MemberExpression')
         }
@@ -986,7 +985,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
           object: node,
           property: this.gobbleIdentifier()
         }
-      } else if (cc === OBRACK_CODE) {
+      } else if (cc === CODE_OPEN_BRACKET) {
         if (!this.config.Features.Members.Computed) {
           this.throwError('Unexpected computed MemberExpression')
         }
@@ -1004,11 +1003,11 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
         this.gobbleSpaces()
         cc = this.charCode()
-        if (cc !== CBRACK_CODE) {
+        if (cc !== CODE_CLOSE_BRACKET) {
           this.throwError('Unclosed [')
         }
         this.index++
-      } else if (cc === OPAREN_CODE) {
+      } else if (cc === CODE_OPEN_PARENTHESES) {
         if (!this.config.Features.Calls) {
           this.throwError('Unexpected function call')
         }
@@ -1016,7 +1015,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
         // A function call is being made; gobble all the arguments
         node = {
           type: CALL_EXP,
-          arguments: this.gobbleArguments(CPAREN_CODE),
+          arguments: this.gobbleArguments(CODE_CLOSE_PARENTHESES),
           callee: node
         }
       }
@@ -1040,7 +1039,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     const node = this.gobbleExpression()
     this.gobbleSpaces()
 
-    if (this.charCode() !== CPAREN_CODE) {
+    if (this.charCode() !== CODE_CLOSE_PARENTHESES) {
       this.throwError('Unclosed (')
     }
 
@@ -1062,7 +1061,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
     return {
       type: ARRAY_EXP,
-      elements: this.gobbleArguments(CBRACK_CODE)
+      elements: this.gobbleArguments(CODE_CLOSE_BRACKET)
     }
   }
 
@@ -1122,3 +1121,5 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     }
   };
 }
+
+// cSpell:words JSEP Oney

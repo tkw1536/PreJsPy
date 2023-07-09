@@ -1,6 +1,6 @@
 """
     (c) Tom Wiesing 2016-20, licensed under MIT license
-    This code is heavily based on the JavaScript version JSEP
+    This code is insprired by the JavaScript version JSEP
     The original code is (c) 2013 Stephen Oney, http://jsep.from.so/ and
     licensed under MIT
 """
@@ -118,9 +118,9 @@ if TYPE_CHECKING:
         type: tLiteral["ArrayExpression"]
         elements: List["Expression[L,U,B]"]
 
-    class _BiopInfo(TypedDict, Generic[B]):
+    class _BinaryOperatorInfo(TypedDict, Generic[B]):
         value: B
-        prec: int
+        precedence: int
 
     class _OperatorsConfig(TypedDict, Generic[L, U, B]):
         Literals: Dict[str, L]
@@ -203,19 +203,19 @@ class PreJsPy(Generic[L, U, B]):
     """Represents a single instance of the PreJSPy Parser."""
 
     # List of char codes.
-    PERIOD_CODE: Final = ord(".")
-    COMMA_CODE: Final = ord(",")  # ','
-    SQUOTE_CODE: Final = ord("'")  # single quote
-    DQUOTE_CODE: Final = ord('"')  # double quotes
-    OPAREN_CODE: Final = ord("(")  # (
-    CPAREN_CODE: Final = ord(")")  # )
-    OBRACK_CODE: Final = ord("[")  # [
-    CBRACK_CODE: Final = ord("]")  # ]
-    QUMARK_CODE: Final = ord("?")  # ?
-    SEMCOL_CODE: Final = ord(";")  # ;
-    COLON_CODE: Final = ord(":")  # :
-    SPACE_CODE: Final = ord(" ")
-    TAB_CODE: Final = ord("\t")
+    CODE_PERIOD: Final = ord(".")
+    CODE_COMMA: Final = ord(",")  # ','
+    CODE_SINGLE_QUOTE: Final = ord("'")  # single quote
+    CODE_DOUBLE_QUOTE: Final = ord('"')  # double quotes
+    CODE_OPEN_PARENTHESES: Final = ord("(")  # (
+    CODE_CLOSE_PARENTHESES: Final = ord(")")  # )
+    CODE_OPEN_BRACKET: Final = ord("[")  # [
+    CODE_CLOSE_BRACKET: Final = ord("]")  # ]
+    CODE_QUESTIONMARK: Final = ord("?")  # ?
+    CODE_SEMICOLON: Final = ord(";")  # ;
+    CODE_COLON: Final = ord(":")  # :
+    CODE_SPACE: Final = ord(" ")
+    CODE_TAB: Final = ord("\t")
 
     # =======================
     # STATIC HELPER FUNCTIONS
@@ -331,14 +331,14 @@ class PreJsPy(Generic[L, U, B]):
                     self.__config["Operators"]["Unary"] = config["Operators"][
                         "Unary"
                     ].copy()
-                    self.__max_uops_len = PreJsPy.__getMaxMemLen(
+                    self.__unaryOperatorLength = PreJsPy.__getMaxMemLen(
                         self.__config["Operators"]["Unary"]
                     )
                 if "Binary" in config["Operators"]:
                     self.__config["Operators"]["Binary"] = config["Operators"][
                         "Binary"
                     ].copy()
-                    self.__max_binop_len = PreJsPy.__getMaxKeyLen(
+                    self.__binaryOperatorLength = PreJsPy.__getMaxKeyLen(
                         self.__config["Operators"]["Binary"]
                     )
             if "Features" in config:
@@ -470,7 +470,7 @@ class PreJsPy(Generic[L, U, B]):
             ch_i = self.__charCode()
 
             # Expressions can be separated by semicolons, commas, or just inferred without any separators
-            if ch_i == PreJsPy.SEMCOL_CODE or ch_i == PreJsPy.COMMA_CODE:
+            if ch_i == PreJsPy.CODE_SEMICOLON or ch_i == PreJsPy.CODE_COMMA:
                 self.__index += 1  # ignore separators
                 continue
 
@@ -496,7 +496,7 @@ class PreJsPy(Generic[L, U, B]):
     def __gobbleSpaces(self) -> None:
         """Push `index` up to the next non-space character"""
         ch = self.__charCode()
-        while ch == PreJsPy.SPACE_CODE or ch == PreJsPy.TAB_CODE:
+        while ch == PreJsPy.CODE_SPACE or ch == PreJsPy.CODE_TAB:
             self.__index += 1
             ch = self.__charCode()
 
@@ -514,7 +514,7 @@ class PreJsPy(Generic[L, U, B]):
         self.__gobbleSpaces()
 
         # not a ternary expression => return immediately
-        if self.__charCode() != PreJsPy.QUMARK_CODE or test is None:
+        if self.__charCode() != PreJsPy.CODE_QUESTIONMARK or test is None:
             return test
 
         if not self.__config["Features"]["Tertiary"]:
@@ -529,7 +529,7 @@ class PreJsPy(Generic[L, U, B]):
         self.__gobbleSpaces()
 
         # need a ':' for the second part of the alternate
-        if self.__charCode() != PreJsPy.COLON_CODE:
+        if self.__charCode() != PreJsPy.CODE_COLON:
             self.__throw_error("Expected :")
 
         self.__index += 1
@@ -551,7 +551,9 @@ class PreJsPy(Generic[L, U, B]):
     # then, return that binary operation
     def __gobbleBinaryOp(self) -> Optional[B]:
         self.__gobbleSpaces()
-        to_check = self.__expr[self.__index : self.__index + self.__max_binop_len]
+        to_check = self.__expr[
+            self.__index : self.__index + self.__binaryOperatorLength
+        ]
         tc_len = len(to_check)
         while tc_len > 0:
             if to_check in self.__config["Operators"]["Binary"]:
@@ -567,34 +569,34 @@ class PreJsPy(Generic[L, U, B]):
         # First, try to get the leftmost thing
         # Then, check to see if there's a binary operator operating on that leftmost thing
         left = self.__gobbleToken()
-        biop = self.__gobbleBinaryOp()
+        value = self.__gobbleBinaryOp()
 
         # If there wasn't a binary operator, just return the leftmost node
-        if biop is None or left is None:
+        if value is None or left is None:
             return left
 
         right = self.__gobbleToken()
         if not right:
-            self.__throw_error("Expected expression after " + biop)
+            self.__throw_error("Expected expression after " + value)
 
         # create a stack of expressions and information about the operators between them
         exprs = [left, right]
         ops = [
-            {"value": biop, "prec": self.__binaryPrecedence(biop)}
-        ]  # type: List[_BiopInfo[B]]
+            {"value": value, "precedence": self.__binaryPrecedence(value)}
+        ]  # type: List[_BinaryOperatorInfo[B]]
 
         # Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
         while True:
-            biop = self.__gobbleBinaryOp()
-            if biop is None:
+            value = self.__gobbleBinaryOp()
+            if value is None:
                 break
 
-            prec = self.__binaryPrecedence(biop)
-            if prec == 0:
+            precedence = self.__binaryPrecedence(value)
+            if precedence == 0:
                 break
 
             # Reduce: make a binary expression from the three topmost entries.
-            while (len(ops) > 0) and prec < ops[-1]["prec"]:
+            while (len(ops) > 0) and precedence < ops[-1]["precedence"]:
                 right, left = exprs.pop(), exprs.pop()
                 op = ops.pop()
                 exprs.append(
@@ -609,11 +611,11 @@ class PreJsPy(Generic[L, U, B]):
             # gobble the next token in the tree
             node = self.__gobbleToken()
             if node is None:
-                self.__throw_error("Expected expression after " + biop)
+                self.__throw_error("Expected expression after " + value)
             exprs.append(node)
 
-            # and store the info about the oeprator
-            ops.append({"value": biop, "prec": prec})
+            # and store the info about the operator
+            ops.append({"value": value, "precedence": precedence})
 
         i = len(exprs) - 1
         j = len(ops) - 1
@@ -640,16 +642,16 @@ class PreJsPy(Generic[L, U, B]):
         self.__gobbleSpaces()
         ch = self.__charCode()
 
-        if self.__isDecimalDigit(ch) or ch == PreJsPy.PERIOD_CODE:
+        if self.__isDecimalDigit(ch) or ch == PreJsPy.CODE_PERIOD:
             # Char code 46 is a dot `.` which can start off a numeric literal
             return self.__gobbleNumericLiteral()
-        elif ch == PreJsPy.SQUOTE_CODE or ch == PreJsPy.DQUOTE_CODE:
+        elif ch == PreJsPy.CODE_SINGLE_QUOTE or ch == PreJsPy.CODE_DOUBLE_QUOTE:
             # Single or double quotes
             return self.__gobbleStringLiteral()
-        elif ch == PreJsPy.OBRACK_CODE:
+        elif ch == PreJsPy.CODE_OPEN_BRACKET:
             return self.__gobbleArray()
 
-        to_check = self.__expr[self.__index : self.__index + self.__max_uops_len]
+        to_check = self.__expr[self.__index : self.__index + self.__unaryOperatorLength]
         tc_len = len(to_check)
         while tc_len > 0:
             if to_check in self.__config["Operators"]["Unary"]:
@@ -666,7 +668,7 @@ class PreJsPy(Generic[L, U, B]):
             tc_len -= 1
             to_check = to_check[:tc_len]
 
-        if PreJsPy.__isIdentifierStart(ch) or ch == PreJsPy.OPAREN_CODE:
+        if PreJsPy.__isIdentifierStart(ch) or ch == PreJsPy.CODE_OPEN_PARENTHESES:
             # `foo`, `bar.baz`
             return self.__gobbleVariable()
 
@@ -704,7 +706,7 @@ class PreJsPy(Generic[L, U, B]):
         # gobble the number itself
         number = self.__gobbleDecimal()
 
-        if self.__charCode() == PreJsPy.PERIOD_CODE:
+        if self.__charCode() == PreJsPy.CODE_PERIOD:
             # can start with a decimal marker
             number += self.__char()
             self.__index += 1
@@ -738,7 +740,7 @@ class PreJsPy(Generic[L, U, B]):
                 + self.__char()
                 + ")",
             )
-        elif chCode == PreJsPy.PERIOD_CODE:
+        elif chCode == PreJsPy.CODE_PERIOD:
             self.__throw_error("Unexpected period")
 
         if not self.__config["Features"]["Literals"]["Numeric"]:
@@ -864,7 +866,7 @@ class PreJsPy(Generic[L, U, B]):
                 break
 
             # between expressions
-            if ch_i == PreJsPy.COMMA_CODE:
+            if ch_i == PreJsPy.CODE_COMMA:
                 self.__index += 1
                 continue
 
@@ -886,7 +888,7 @@ class PreJsPy(Generic[L, U, B]):
 
         ch_i = self.__charCode()
 
-        if ch_i == PreJsPy.OPAREN_CODE:
+        if ch_i == PreJsPy.CODE_OPEN_PARENTHESES:
             node = self.__gobbleGroup()
         else:
             node = self.__gobbleIdentifier()
@@ -899,13 +901,13 @@ class PreJsPy(Generic[L, U, B]):
         ch_i = self.__charCode()
 
         while (
-            ch_i == PreJsPy.PERIOD_CODE
-            or ch_i == PreJsPy.OBRACK_CODE
-            or ch_i == PreJsPy.OPAREN_CODE
+            ch_i == PreJsPy.CODE_PERIOD
+            or ch_i == PreJsPy.CODE_OPEN_BRACKET
+            or ch_i == PreJsPy.CODE_OPEN_PARENTHESES
         ):
             self.__index += 1
 
-            if ch_i == PreJsPy.PERIOD_CODE:
+            if ch_i == PreJsPy.CODE_PERIOD:
                 if not self.__config["Features"]["Members"]["Static"]:
                     self.__throw_error("Unexpected static MemberExpression")
 
@@ -917,7 +919,7 @@ class PreJsPy(Generic[L, U, B]):
                     "object": node,
                     "property": self.__gobbleIdentifier(),
                 }
-            elif ch_i == PreJsPy.OBRACK_CODE:
+            elif ch_i == PreJsPy.CODE_OPEN_BRACKET:
                 if not self.__config["Features"]["Members"]["Computed"]:
                     self.__throw_error("Unexpected computed MemberExpression")
 
@@ -936,17 +938,17 @@ class PreJsPy(Generic[L, U, B]):
 
                 ch_i = self.__charCode()
 
-                if ch_i != PreJsPy.CBRACK_CODE:
+                if ch_i != PreJsPy.CODE_CLOSE_BRACKET:
                     self.__throw_error("Unclosed [")
 
                 self.__index += 1
-            elif ch_i == PreJsPy.OPAREN_CODE:
+            elif ch_i == PreJsPy.CODE_OPEN_PARENTHESES:
                 if not self.__config["Features"]["Calls"]:
                     self.__throw_error("Unexpected function call")
                 # A function call is being made; gobble all the arguments
                 node = {
                     "type": CALL_EXP,
-                    "arguments": self.__gobbleArguments(PreJsPy.CPAREN_CODE),
+                    "arguments": self.__gobbleArguments(PreJsPy.CODE_CLOSE_PARENTHESES),
                     "callee": node,
                 }
 
@@ -966,7 +968,7 @@ class PreJsPy(Generic[L, U, B]):
 
         self.__gobbleSpaces()
 
-        if self.__charCode() != PreJsPy.CPAREN_CODE:
+        if self.__charCode() != PreJsPy.CODE_CLOSE_PARENTHESES:
             self.__throw_error("Unclosed (")
 
         self.__index += 1
@@ -983,7 +985,7 @@ class PreJsPy(Generic[L, U, B]):
 
         return {
             "type": ARRAY_EXP,
-            "elements": self.__gobbleArguments(PreJsPy.CBRACK_CODE),
+            "elements": self.__gobbleArguments(PreJsPy.CODE_CLOSE_BRACKET),
         }
 
     @staticmethod
@@ -1038,3 +1040,6 @@ class PreJsPy(Generic[L, U, B]):
                 },
             },
         }
+
+
+# cSpell:words JSEP Oney
