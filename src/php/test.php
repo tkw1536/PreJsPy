@@ -2,24 +2,27 @@
 
 include "PreJsPy.php";
 
-class TestPreJsPy {
+class TestPreJsPy
+{
     public static string $BASE_PATH;
-    public static function init() {
+    public static function init()
+    {
         self::$BASE_PATH = join('/', [dirname(__FILE__), '..', '..', 'tests']);
     }
-    
+
     /**
      * Runs all tests stored in a given json file
      *
      * @param string $fn filename to load
      * @return void
      */
-    public static function test_file(string $fn): void {
+    public static function test_file(string $fn): void
+    {
         echo "Running tests from " . $fn . " ";
 
         // Read the test case file
         $tests = json_decode(file_get_contents(self::$BASE_PATH . '/' . $fn), TRUE);
-        
+
         // Create a new PreJSPy() instance.
         $p = new PreJsPy();
 
@@ -30,7 +33,8 @@ class TestPreJsPy {
         echo " OK\n";
     }
 
-    private static function run_single_case(PreJsPy $instance, array $config, string $inp, array $out, string $message) {
+    private static function run_single_case(PreJsPy $instance, array $config, string $inp, array $out, string $message)
+    {
         $instance->SetConfig(PreJsPy::GetDefaultConfig());
         $instance->SetConfig($config);
 
@@ -51,7 +55,8 @@ class TestPreJsPy {
      * @param mixed $value
      * @return string
      */
-    private static function json_serialize(mixed $value): string {
+    private static function json_serialize(mixed $value): string
+    {
         return json_encode(self::value_normalize($value));
     }
 
@@ -63,13 +68,16 @@ class TestPreJsPy {
      * @param mixed $value
      * @return mixed
      */
-    private static function value_normalize(mixed $value): mixed {
+    private static function value_normalize(mixed $value): mixed
+    {
         // it's not an array => copy it!
         if (!is_array($value)) {
             return $value;
         }
 
-        $value = array_map(function(mixed $value) { return self::value_normalize($value); }, $value);
+        $value = array_map(function (mixed $value) {
+            return self::value_normalize($value);
+        }, $value);
         ksort($value);
         return $value;
     }
