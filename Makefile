@@ -1,4 +1,4 @@
-.PHONY: all python pytestdeps pycheck node
+.PHONY: all python pytestdeps pycheck node php
 
 all: python node
 
@@ -12,3 +12,6 @@ pycheck:
 
 node:
 	cd src/js/ && npm test
+
+php:
+	cd src/php && php test.php

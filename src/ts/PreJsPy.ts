@@ -881,7 +881,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
       type: ExpressionType.LITERAL,
       kind: 'string',
       value: str,
-      raw: quote + str + quote // TODO: Does this need fixing
+      raw: this.expr.substring(start, this.index)
     }
   }
 

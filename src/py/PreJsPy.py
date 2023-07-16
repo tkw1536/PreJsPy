@@ -397,6 +397,8 @@ class PreJsPy(Generic[L, U, B]):
     # =========
 
     __config: "Config[L, U, B]"
+    __unaryOperatorLength: int
+    __binaryOperatorLength: int
 
     def __init__(self) -> None:
         """Creates a new PreJSPyParser instance."""
@@ -469,8 +471,6 @@ class PreJsPy(Generic[L, U, B]):
     def __gobbleCompound(self) -> "Expression[L,U,B]":
         """Gobbles a single or compound expression"""
         nodes = []
-        ch_i = None
-        node = None
 
         while self.__index < self.__length:
             ch_i = self.__charCode()
@@ -515,16 +515,11 @@ class PreJsPy(Generic[L, U, B]):
             return self.__gobbleBinaryExpression()
 
         test = self.__gobbleBinaryExpression()
-        consequent = None
-        alternate = None
         self.__gobbleSpaces()
 
         # not a ternary expression => return immediately
         if self.__charCode() != PreJsPy.CODE_QUESTIONMARK or test is None:
             return test
-
-        if not self.__config["Features"]["Tertiary"]:
-            self.__throw_error("Unexpected tertiary operator")
 
         #  Ternary expression: test ? consequent : alternate
         self.__index += 1
@@ -641,10 +636,6 @@ class PreJsPy(Generic[L, U, B]):
     # An individual part of a binary expression:
     # e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
     def __gobbleToken(self) -> Optional["Expression[L,U,B]"]:
-        ch: int = -1
-        to_check = None
-        tc_len = None
-
         self.__gobbleSpaces()
         ch = self.__charCode()
 
@@ -746,11 +737,11 @@ class PreJsPy(Generic[L, U, B]):
                 + self.__char()
                 + ")",
             )
-        elif chCode == PreJsPy.CODE_PERIOD:
+        if chCode == PreJsPy.CODE_PERIOD:
             self.__throw_error("Unexpected period")
 
         if not self.__config["Features"]["Literals"]["Numeric"]:
-            self.__index -= len(number)
+            self.__index = start
             self.__throw_error("Unexpected numeric literal")
 
         # parse the float value and get the literal (if needed)
@@ -770,13 +761,12 @@ class PreJsPy(Generic[L, U, B]):
     def __gobbleStringLiteral(self) -> "StringLiteral":
         s = ""
 
-        index_start = self.__index
+        start = self.__index
 
         quote = self.__char()
         self.__index += 1
 
         closed = False
-        ch = None
 
         while self.__index < self.__length:
             ch = self.__char()
@@ -815,14 +805,14 @@ class PreJsPy(Generic[L, U, B]):
         if not closed:
             self.__throw_error('Unclosed quote after "' + s + '"')
         if not self.__config["Features"]["Literals"]["String"]:
-            self.__index = index_start
+            self.__index = start
             self.__throw_error("Unexpected string literal")
 
         return {
             "type": ExpressionType.LITERAL,
             "kind": "string",
             "value": s,
-            "raw": quote + s + quote,
+            "raw": self.__expr[start : self.__index],
         }
 
     # Gobbles only identifiers
@@ -869,9 +859,7 @@ class PreJsPy(Generic[L, U, B]):
     # until the terminator character `)` or `]` is encountered.
     # e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
     def __gobbleArguments(self, termination: int) -> List["Expression[L,U,B]"]:
-        ch_i = None
         args = []  # type: List[Expression[L,U,B]]
-        node = None
 
         while self.__index < self.__length:
             self.__gobbleSpaces()
@@ -900,8 +888,6 @@ class PreJsPy(Generic[L, U, B]):
     # It also gobbles function calls:
     # e.g. `Math.acos(obj.angle)`
     def __gobbleVariable(self) -> Optional["Expression[L,U,B]"]:
-        ch_i = None
-
         ch_i = self.__charCode()
 
         if ch_i == PreJsPy.CODE_OPEN_PARENTHESES:

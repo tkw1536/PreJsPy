@@ -14,7 +14,7 @@
   {
     "config": {},
     "input": "\"\\n\\t\\r\\\"\\'\"",
-    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "\"\n\t\r\"'\"", "kind":"string"},
+    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "\"\\n\\t\\r\\\"\\'\"", "kind":"string"},
     "message": "escaped double quotes literal"
   },
   {
@@ -32,7 +32,7 @@
   {
     "config": {},
     "input": "'\\n\\t\\r\\\"\\''",
-    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "'\n\t\r\"''", "kind":"string"},
+    "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "'\\n\\t\\r\\\"\\''", "kind":"string"},
     "message": "escaped single quotes literal"
   }
 ]

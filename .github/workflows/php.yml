@@ -1,0 +1,23 @@
+name: PHP Tests
+
+on: ['push', 'pull_request']
+
+jobs:
+  test:
+    name: 'PHP ${{ matrix.php-version }}'
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2']
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: none
+      - name: Run Tests
+        run:  cd src/php && php test.php

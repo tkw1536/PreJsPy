@@ -7,21 +7,21 @@
 ## What is this?
 
 PreJsPy is highly configurable a precedence-based parser written in both
-Python (3.8+), JavaScript (ES5+) and other languages. The default grammar is based on a
+Python (3.8+), JavaScript (ES5+), PHP (8.1+) and other languages. The default grammar is based on a
 subset of JavaScript but can be adapted to a lot of different scenarios.
 
 ```python
 
 >>> from PreJsPy import PreJsPy
 >>> parser = PreJsPy()
->>> parser.parse("6 * 9 == 42")
+>>> parser.Parse("6 * 9 == 42")
 {'type': 'BinaryExpression', 'operator': '==', 'right': {'type': 'Literal', 'raw': '42', 'value': 42.0}, 'left': {'type': 'BinaryExpression', 'operator': '*', 'right': {'type': 'Literal', 'raw': '9', 'value': 9.0}, 'left': {'type': 'Literal', 'raw': '6', 'value': 6.0}}}
 ```
 
 ```js
 > var PreJsPy = require('pre-js-py').PreJsPy;
 > parser = new PreJsPy()
-> parser.parse('6 * 9 == 42')
+> parser.{arse('6 * 9 == 42')
 { type: 'BinaryExpression',
   operator: '==',
   left:
@@ -30,6 +30,16 @@ subset of JavaScript but can be adapted to a lot of different scenarios.
      left: { type: 'Literal', value: 6, raw: '6' },
      right: { type: 'Literal', value: 9, raw: '9' } },
   right: { type: 'Literal', value: 42, raw: '42' } }
+```
+
+```php
+<?php
+include "./src/php/PreJsPy.php";
+$parser = new PreJsPy();
+$parser->Parse("6 * 9 == 42");
+
+// Serialized output:
+// a:4:{s:4:"type";E:25:"ExpressionType:BINARY_EXP";s:8:"operator";s:2:"==";s:4:"left";a:4:{s:4:"type";r:2;s:8:"operator";s:1:"*";s:4:"left";a:4:{s:4:"type";E:22:"ExpressionType:LITERAL";s:4:"kind";s:6:"number";s:5:"value";d:6;s:3:"raw";s:1:"6";}s:5:"right";a:4:{s:4:"type";r:8;s:4:"kind";s:6:"number";s:5:"value";d:9;s:3:"raw";s:1:"9";}}s:5:"right";a:4:{s:4:"type";r:8;s:4:"kind";s:6:"number";s:5:"value";d:42;s:3:"raw";s:2:"42";}}
 ```
 
 The JavaScript version of this library has been adapted from the
