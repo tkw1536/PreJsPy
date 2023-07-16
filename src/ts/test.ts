@@ -6,12 +6,13 @@ import type { Expression, PartialConfig } from './PreJsPy'
 const BASE_PATH = path.join(__dirname, '..', '..', 'tests')
 
 interface TestCase {
-  config: PartialConfig<any, string, string>
+  config: PartialConfig
   input: string
-  output: Expression<any, string, string>
+  output: Expression
   message: string
 }
 
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 class TestPreJsPy {
   /**
    * Runs all test cases from a given file.
@@ -48,43 +49,40 @@ class TestPreJsPy {
   * @param message Message of test case.
   * @type message string
   */
-  private static runSingleFile (instance: PreJsPy<any, string, string>, test: TestCase): void {
-   instance.SetConfig(PreJsPy.GetDefaultConfig()) // reset the config to default
-   instance.SetConfig(test.config) // set config
- 
-   process.stdout.write('.')
-   const want = this.jsonSerialize(test.output)
-   const got = this.jsonSerialize(instance.Parse(test.input))
+  private static runSingleFile (instance: PreJsPy, test: TestCase): void {
+    instance.SetConfig(PreJsPy.GetDefaultConfig()) // reset the config to default
+    instance.SetConfig(test.config) // set config
 
-   if (want != got) {
-    console.log('!\nFail\n')
+    process.stdout.write('.')
+    const want = this.jsonSerialize(test.output)
+    const got = this.jsonSerialize(instance.Parse(test.input))
 
-    process.stderr.write("Failed testcase " + test.message + ":\nGot:      " + got + "\nExpected: " + want + "\n")
-    process.exit(1)
-   }
- }
+    if (want !== got) {
+      console.log('!\nFail\n')
+
+      process.stderr.write('Failed testcase ' + test.message + ':\nGot:      ' + got + '\nExpected: ' + want + '\n')
+      process.exit(1)
+    }
+  }
 
   /** deterministic version of JSON.stringify that takes key order into account */
-  private static jsonSerialize(value: any): string {
+  private static jsonSerialize (value: any): string {
     if (Array.isArray(value)) {
-      return "[" + value.map(e => this.jsonSerialize(e)).join(",") + "]";
+      return '[' + value.map(e => this.jsonSerialize(e)).join(',') + ']'
     }
     if (value === null) {
-      return "null";
+      return 'null'
     }
-    if (typeof value === "object") {
+    if (typeof value === 'object') {
       const pairs = Object.keys(value).sort()
-        .map(key => JSON.stringify(key) + ":" + this.jsonSerialize(value[key]));
-      return "{" + pairs.join(",") + "}";
+        .map(key => JSON.stringify(key) + ':' + this.jsonSerialize(value[key]))
+      return '{' + pairs.join(',') + '}'
     }
 
     // regular JSON.stringify
-    return JSON.stringify(value);
+    return JSON.stringify(value)
   }
 }
-
-
-
 
 // ======================
 // RUN ALL THE TEST CASES

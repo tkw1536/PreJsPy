@@ -9,22 +9,19 @@
 
 /**
  * An Expression represents a parsed tree for PreJSPy.
- * @template L is the type of literals
- * @template U is the type of unary expressions
- * @template B is the type of binary expressions
  */
-export type Expression<L, U extends string, B extends string> =
+export type Expression =
     Identifier |
-    Literal<L> |
+    Literal |
     StringLiteral |
     NumericLiteral |
-    Compound<L, U, B> |
-    Member<L, U, B> |
-    Call<L, U, B> |
-    Unary<L, U, B> |
-    Binary<L, U, B> |
-    Condition<L, U, B> |
-    Ary<L, U, B>
+    Compound |
+    Member |
+    Call |
+    Unary |
+    Binary |
+    Condition |
+    Ary
 
 class ParsingError extends Error {
   readonly error: string
@@ -47,9 +44,9 @@ class ParsingError extends Error {
   }
 }
 
-interface Compound<L, U extends string, B extends string> {
+interface Compound {
   type: ExpressionType.COMPOUND
-  body: Array<Expression<L, U, B>>
+  body: Expression[]
 }
 
 interface Identifier {
@@ -57,16 +54,16 @@ interface Identifier {
   name: string
 }
 
-interface Member<L, U extends string, B extends string> {
+interface Member {
   type: ExpressionType.MEMBER_EXP
   computed: boolean
-  object: Expression<L, U, B>
-  property: Expression<L, U, B>
+  object: Expression
+  property: Expression
 }
 
-interface Literal<L> {
+interface Literal {
   type: ExpressionType.LITERAL
-  value: L
+  value: any
   raw: string
 }
 
@@ -84,45 +81,45 @@ interface NumericLiteral {
   raw: string
 }
 
-interface Call<L, U extends string, B extends string> {
+interface Call {
   type: ExpressionType.CALL_EXP
-  arguments: Array<Expression<L, U, B>>
-  callee: Expression<L, U, B>
+  arguments: Expression[]
+  callee: Expression
 }
 
-interface Unary<L, U extends string, B extends string> {
+interface Unary {
   type: ExpressionType.UNARY_EXP
-  operator: U
-  argument: Expression<L, U, B>
+  operator: string
+  argument: Expression
 }
 
-interface Binary<L, U extends string, B extends string> {
+interface Binary {
   type: ExpressionType.BINARY_EXP
-  operator: B
-  left: Expression<L, U, B>
-  right: Expression<L, U, B>
+  operator: string
+  left: Expression
+  right: Expression
 }
 
-interface Condition<L, U extends string, B extends string> {
+interface Condition {
   type: ExpressionType.CONDITIONAL_EXP
-  test: Expression<L, U, B>
-  consequent: Expression<L, U, B>
-  alternate: Expression<L, U, B>
+  test: Expression
+  consequent: Expression
+  alternate: Expression
 }
 
-interface Ary<L, U extends string, B extends string> {
+interface Ary {
   type: ExpressionType.ARRAY_EXP
-  elements: Array<Expression<L, U, B>>
+  elements: Expression[]
 }
 
 /**
  * Configuration for PreJsPy.
  */
-export interface Config<L extends boolean | null, U extends string, B extends string> {
+export interface Config {
   Operators: {
-    Literals: Record<string, L>
-    Unary: U[]
-    Binary: Record<B, number>
+    Literals: Record<string, any>
+    Unary: string[]
+    Binary: Record<string, number>
   }
 
   Features: {
@@ -143,8 +140,8 @@ export interface Config<L extends boolean | null, U extends string, B extends st
   }
 }
 
-export type PartialConfig<L extends boolean | null, U extends string, B extends string> = Partial<{
-  Operators: Partial<Config<L, U, B>['Operators']>
+export type PartialConfig = Partial<{
+  Operators: Partial<Config['Operators']>
   Features: Partial<{
     Compound: boolean
     Tertiary: boolean
@@ -197,7 +194,7 @@ const CODE_TAB = ord('\t')
 /** ParsingResult represents a result from parsing */
 type ParsingResult<T> = [T, null] | [null, ParsingError]
 
-export class PreJsPy<L extends boolean | null, U extends string, B extends string> {
+export class PreJsPy {
   /**
      * Throws a parser error with a given message and a given index.
      * @param message Message of error to throw.
@@ -291,7 +288,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * Gets the configuration of this parser.
      * @return {PreJsPy.Config<L,U,B>}
      */
-  GetConfig (): Config<L, U, B> {
+  GetConfig (): Config {
     return {
       Operators: {
         Literals: PreJsPy.copyDict(this.config.Operators.Literals),
@@ -309,16 +306,14 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     }
   }
 
-  readonly config: Config<L, U, B>
+  readonly config: Config
   private unaryOperatorLength = 0
   private binaryOperatorLength = 0
 
   /**
      * Set the configuration of this parser.
-     * @param {PreJsPy.PartialConfig<L,U,B>?} config
-     * @return {PreJsPy.Config<L,U,B>}
      */
-  SetConfig (config?: PartialConfig<L, U, B>): Config<L, U, B> {
+  SetConfig (config?: PartialConfig): Config {
     if (typeof config === 'object') {
       if (typeof config.Operators === 'object') {
         if (config.Operators.Literals != null) {
@@ -379,7 +374,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
   // INIT CODE
   // =========
   constructor () {
-    this.config = PreJsPy.GetDefaultConfig() as Config<L, U, B>
+    this.config = PreJsPy.GetDefaultConfig()
     this.SetConfig(this.config)
   }
 
@@ -391,7 +386,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * Returns the precedence of a binary operator or `0` if it isn't a binary operator.
      * @param operator Value of operator to lookup
      */
-  private binaryPrecedence (operator: B): number {
+  private binaryPrecedence (operator: string): number {
     const binary = this.config.Operators.Binary
     return binary[operator] ?? 0
   };
@@ -417,7 +412,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
   /**
      * Parses a source string into a parse tree
      */
-  Parse (expr: string): Expression<L, U, B> {
+  Parse (expr: string): Expression {
     // setup the state properly
     this.index = 0
     this.expr = expr
@@ -436,7 +431,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
   /**
    * Parses a source string into an expression, or returns an error
    */
-  TryParse (expr: string): ParsingResult<Expression<L, U, B>> {
+  TryParse (expr: string): ParsingResult<Expression> {
     try {
       const result = this.Parse(expr)
       return [result, null]
@@ -451,10 +446,10 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
   /**
      * Gobbles a single or compound expression from the input.
      */
-  private gobbleCompound (): Expression<L, U, B> {
+  private gobbleCompound (): Expression {
     // TODO: Disable compound expressions
 
-    const nodes: Array<Expression<L, U, B>> = []
+    const nodes: Expression[] = []
 
     while (this.index < this.length) {
       const cc = this.charCode()
@@ -515,7 +510,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * This code first attempts to check if a tertiary expression is provided and, if not the case, delegates to a binary expression.
      * @returns
      */
-  private gobbleExpression (): Expression<L, U, B> | null {
+  private gobbleExpression (): Expression | null {
     // if we don't have the tertiary enabled, gobble a binary expression
     const test = this.gobbleBinaryExpression()
     if (!this.config.Features.Tertiary) {
@@ -565,14 +560,14 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      *
      * @returns {string|false}
      */
-  private gobbleBinaryOp (): B | null {
+  private gobbleBinaryOp (): string | null {
     this.gobbleSpaces()
 
     for (let candidateLength = this.binaryOperatorLength; candidateLength > 0; candidateLength--) {
       const candidate = this.expr.substring(this.index, this.index + candidateLength)
       if (Object.prototype.hasOwnProperty.call(this.config.Operators.Binary, candidate)) {
         this.index += candidateLength
-        return candidate as B
+        return candidate
       }
     }
     return null
@@ -580,7 +575,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
   // This function is responsible for gobbling an individual expression,
   // e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
-  private gobbleBinaryExpression (): Expression<L, U, B> | null {
+  private gobbleBinaryExpression (): Expression | null {
     // First, try to get the leftmost thing
     // Then, check to see if there's a binary operator operating on that leftmost thing
     const left = this.gobbleToken()
@@ -662,7 +657,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
   // An individual part of a binary expression:
   // e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
-  private gobbleToken (): Expression<L, U, B> | null {
+  private gobbleToken (): Expression | null {
     this.gobbleSpaces()
     const ch = this.charCode()
 
@@ -679,7 +674,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
     let candidate = this.expr.substring(this.index, this.index + this.unaryOperatorLength)
     let candidateLength = candidate.length
     while (candidateLength > 0) {
-      if (this.config.Operators.Unary.includes(candidate as U)) {
+      if (this.config.Operators.Unary.includes(candidate)) {
         this.index += candidateLength
 
         const argument = this.gobbleToken()
@@ -689,7 +684,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
 
         return {
           type: ExpressionType.UNARY_EXP,
-          operator: candidate as U,
+          operator: candidate,
           argument
         }
       }
@@ -892,7 +887,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * Also, this function checks if that identifier is a literal:
      * (e.g. `true`, `false`, `null`) or `this`
      */
-  private gobbleIdentifier (): Literal<L> | Identifier {
+  private gobbleIdentifier (): Literal | Identifier {
     const start = this.index
 
     if (!PreJsPy.isIdentifierStart(this.charCode())) {
@@ -934,8 +929,8 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      *
      * e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
      */
-  private gobbleArguments (termination: number): Array<Expression<L, U, B>> {
-    const args: Array<Expression<L, U, B>> = []
+  private gobbleArguments (termination: number): Expression[] {
+    const args: Expression[] = []
     while (this.index < this.length) {
       this.gobbleSpaces()
       const cc = this.charCode()
@@ -965,9 +960,9 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * It also gobbles function calls:
      * Math.acos(obj.angle)
      */
-  private gobbleVariable (): Expression<L, U, B> | null {
+  private gobbleVariable (): Expression | null {
     // parse a group or identifier first
-    let node: Expression<L, U, B> | null = (this.charCode() === CODE_OPEN_PARENTHESES) ? this.gobbleGroup() : this.gobbleIdentifier()
+    let node: Expression | null = (this.charCode() === CODE_OPEN_PARENTHESES) ? this.gobbleGroup() : this.gobbleIdentifier()
     if (node === null) {
       return null
     }
@@ -1036,7 +1031,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * that the next thing it should see is the close parenthesis. If not,
      * then the expression probably doesn't have a `)`
      */
-  private gobbleGroup (): Expression<L, U, B> | null {
+  private gobbleGroup (): Expression | null {
     this.index++
 
     const node = this.gobbleExpression()
@@ -1055,7 +1050,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
      * This function assumes that it needs to gobble the opening bracket
      * and then tries to gobble the expressions as arguments.
      */
-  private gobbleArray (): Ary<L, U, B> {
+  private gobbleArray (): Ary {
     if (!this.config.Features.Literals.Array) {
       this.throwError('Unexpected array literal')
     }
@@ -1071,7 +1066,7 @@ export class PreJsPy<L extends boolean | null, U extends string, B extends strin
   /**
      * Creates and returns a new default configuration.
      */
-  static GetDefaultConfig (): Config<any, string, string> {
+  static GetDefaultConfig (): Config {
     return {
       Operators: {
         Literals: {

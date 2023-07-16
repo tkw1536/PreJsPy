@@ -19,7 +19,7 @@ class TestPreJsPy(object):
         print("Running tests from {} ".format(fn), end="")
 
         # Read the test case file
-        with open(os.path.join(BASE_PATH, fn), 'r') as f:
+        with open(os.path.join(BASE_PATH, fn), "r") as f:
             tests = json.load(f)
 
         # Create a new PreJSPy() instance.
@@ -28,12 +28,12 @@ class TestPreJsPy(object):
         # and run all the test cases.
         for t in tests:
             cls.run_single_case(p, t["config"], t["input"], t["output"], t["message"])
-        
+
         print(" OK")
 
     @classmethod
     def run_single_case(cls, instance, config, inp, out, message):
-        """ Runs a single test case.
+        """Runs a single test case.
         :param instance: PreJsPy instance to test on.
         :type instance: PreJsPy.PreJsPy
 
@@ -59,9 +59,13 @@ class TestPreJsPy(object):
 
         if want != got:
             print("!\nFailed\n")
-            sys.stderr.write("Failed testcase {}:\nGot:      {}\nExpected: {}\n".format(message, got, want))
+            sys.stderr.write(
+                "Failed testcase {}:\nGot:      {}\nExpected: {}\n".format(
+                    message, got, want
+                )
+            )
             sys.exit(1)
-    
+
     @classmethod
     def json_serialize(cls, value):
         return json.dumps(cls.__value_normalize(value), sort_keys=True)
@@ -74,11 +78,8 @@ class TestPreJsPy(object):
         if isinstance(value, list):
             return [cls.__value_normalize(v) for v in value]
         if isinstance(value, dict):
-            return {k: cls.__value_normalize(v) for k,v in value.items()}
+            return {k: cls.__value_normalize(v) for k, v in value.items()}
         return value
-
-    
-
 
 
 # ======================
@@ -89,24 +90,24 @@ print("Python Info: {}".format(sys.implementation))
 print("")
 
 # SYMBOLIC
-TestPreJsPy.test_file('constant_symbolic.json')
-TestPreJsPy.test_file('identifier_symbolic.json')
+TestPreJsPy.test_file("constant_symbolic.json")
+TestPreJsPy.test_file("identifier_symbolic.json")
 
 # LITERALS
-TestPreJsPy.test_file('number_literals.json')
-TestPreJsPy.test_file('string_literals.json')
-TestPreJsPy.test_file('array_literals.json')
+TestPreJsPy.test_file("number_literals.json")
+TestPreJsPy.test_file("string_literals.json")
+TestPreJsPy.test_file("array_literals.json")
 
 # OPERATORS
-TestPreJsPy.test_file('unary_ops.json')
-TestPreJsPy.test_file('binary_ops.json')
+TestPreJsPy.test_file("unary_ops.json")
+TestPreJsPy.test_file("binary_ops.json")
 
 # CALLS & COMPOUNDS
-TestPreJsPy.test_file('call.json')
-TestPreJsPy.test_file('compound.json')
+TestPreJsPy.test_file("call.json")
+TestPreJsPy.test_file("compound.json")
 
 # PRECEDENCES
-TestPreJsPy.test_file('precedence.json')
+TestPreJsPy.test_file("precedence.json")
 
 print("")
 print("Done.")
