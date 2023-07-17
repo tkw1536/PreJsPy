@@ -6,9 +6,6 @@ Each file is encoded in json, and contains an array of test cases.
 Each test case looks like (typescript syntax):
 
 ```typescript
-/**
- * A single PreJsPy Testcase.
- */
 interface TestCase {
   // the configuration to apply for the testcase
   // applied on top of the default config
@@ -26,6 +23,4 @@ interface TestCase {
   // test case message (for debugging)
   message: string
 }
-
-
 ```
