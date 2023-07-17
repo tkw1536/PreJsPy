@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 include "PreJsPy.php";
 
 class TestPreJsPy
@@ -16,24 +18,24 @@ class TestPreJsPy
      * @param string $fn filename to load
      * @return void
      */
-    public static function test_file(string $fn): void
+    public static function testFile(string $fn): void
     {
         echo "Running tests from " . $fn . " ";
 
         // Read the test case file
-        $tests = json_decode(file_get_contents(self::$BASE_PATH . '/' . $fn), TRUE);
+        $tests = json_decode(file_get_contents(self::$BASE_PATH . '/' . $fn), true);
 
         // Create a new PreJSPy() instance.
         $p = new PreJsPy();
 
         // and run all the test cases.
         foreach ($tests as $t) {
-            self::run_single_case($p, $t["config"], $t["input"], $t["output"], $t["message"]);
+            self::runSingleCase($p, $t["config"], $t["input"], $t["output"], $t["message"]);
         }
         echo " OK\n";
     }
 
-    private static function run_single_case(PreJsPy $instance, array $config, string $inp, array $out, string $message)
+    private static function runSingleCase(PreJsPy $instance, array $config, string $inp, array $out, string $message)
     {
         $instance->SetConfig(PreJsPy::GetDefaultConfig());
         $instance->SetConfig($config);
@@ -41,8 +43,8 @@ class TestPreJsPy
         echo ".";
 
         // do a quick and dirty comparison using json_encode
-        $got = self::json_serialize($instance->Parse($inp));
-        $want = self::json_serialize($out);
+        $got = self::jsonSerialize($instance->Parse($inp));
+        $want = self::jsonSerialize($out);
         if ($want !== $got) {
             echo "!\nFailed!\n\n";
             die("Failed testcase $message:\nGot:      $got\nExpected: $want\n");
@@ -55,20 +57,20 @@ class TestPreJsPy
      * @param mixed $value
      * @return string
      */
-    private static function json_serialize(mixed $value): string
+    private static function jsonSerialize(mixed $value): string
     {
-        return json_encode(self::value_normalize($value));
+        return json_encode(self::valueNormalize($value));
     }
 
     /**
      * Return a normalized copy of value.
-     * 
-     * Sorts all arrays according to their keys, even recursively. 
+     *
+     * Sorts all arrays according to their keys, even recursively.
      *
      * @param mixed $value
      * @return mixed
      */
-    private static function value_normalize(mixed $value): mixed
+    private static function valueNormalize(mixed $value): mixed
     {
         // it's not an array => copy it!
         if (!is_array($value)) {
@@ -76,7 +78,7 @@ class TestPreJsPy
         }
 
         $value = array_map(function (mixed $value) {
-            return self::value_normalize($value);
+            return self::valueNormalize($value);
         }, $value);
         ksort($value);
         return $value;
@@ -89,24 +91,24 @@ echo "PHP Version: " . phpversion() . "\n";
 echo "\n";
 
 // SYMBOLIC
-TestPreJsPy::test_file('constant_symbolic.json');
-TestPreJsPy::test_file('identifier_symbolic.json');
+TestPreJsPy::testFile('constant_symbolic.json');
+TestPreJsPy::testFile('identifier_symbolic.json');
 
 // LITERALS
-TestPreJsPy::test_file('number_literals.json');
-TestPreJsPy::test_file('string_literals.json');
-TestPreJsPy::test_file('array_literals.json');
+TestPreJsPy::testFile('number_literals.json');
+TestPreJsPy::testFile('string_literals.json');
+TestPreJsPy::testFile('array_literals.json');
 
 // OPERATORS
-TestPreJsPy::test_file('unary_ops.json');
-TestPreJsPy::test_file('binary_ops.json');
+TestPreJsPy::testFile('unary_ops.json');
+TestPreJsPy::testFile('binary_ops.json');
 
 // CALLS & COMPOUNDS
-TestPreJsPy::test_file('call.json');
-TestPreJsPy::test_file('compound.json');
+TestPreJsPy::testFile('call.json');
+TestPreJsPy::testFile('compound.json');
 
 // PRECEDENCES
-TestPreJsPy::test_file('precedence.json');
+TestPreJsPy::testFile('precedence.json');
 
 echo "\n";
 echo "Done. \n";
