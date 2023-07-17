@@ -42,7 +42,7 @@ class ParsingError extends Error {
     this.expr = expr
     this.index = index
 
-    Object.setPrototypeOf(this, ParsingError.prototype);
+    Object.setPrototypeOf(this, ParsingError.prototype)
   }
 }
 
@@ -469,7 +469,7 @@ export class PreJsPy {
         nodes.push(node)
         continue
       }
- 
+
       if (this.index < this.length) {
         // If we weren't able to find a binary expression and are out of room, then
         // the expression passed in probably has too much

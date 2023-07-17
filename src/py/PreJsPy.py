@@ -197,7 +197,9 @@ class ParsingError(Exception):
         self.expr = expr
         self.index = index
 
-        super().__init__("Index " + str(index) + " of " + json.dumps(expr) + ": " + error)
+        super().__init__(
+            "Index " + str(index) + " of " + json.dumps(expr) + ": " + error
+        )
 
 
 class PreJsPy(object):
@@ -796,7 +798,7 @@ class PreJsPy(object):
                 s += ch
 
         if not closed:
-            self.__throw_error('Unclosed quote after ' + json.dumps(s))
+            self.__throw_error("Unclosed quote after " + json.dumps(s))
         if not self.__config["Features"]["Literals"]["String"]:
             self.__index = start
             self.__throw_error("Unexpected string literal")
