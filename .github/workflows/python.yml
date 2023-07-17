@@ -20,7 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: x64
       - name: Run tests
-        run: cd src/py && python test.py
+        run: make python
   check:
     name: 'Check Format & Types'
 
@@ -34,10 +34,6 @@ jobs:
         python-version: 3.11
         architecture: x64
     - name: Install dependencies
-      run: |
-        pip install black
-        pip install mypy
-    - name: Check Formatting
-      run: cd src/py && black --check PreJsPy.py
-    - name: Check Types
-      run: cd src/py && mypy PreJsPy.py
+      run: make pydeps
+    - name: Check & Lint Python
+      run: make pycheck

@@ -19,9 +19,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
-        run: cd src/ts && yarn install --frozen-lockfile
+        run: make tsdeps
       - name: Run Tests
-        run:  cd src/ts && yarn ts-node test.ts
+        run:  make typescript
   check:
     name: 'Check Format & Types'
 
@@ -34,8 +34,6 @@ jobs:
         with:
           node-version: 19.x
       - name: Install dependencies
-        run: cd src/ts && yarn install --frozen-lockfile
-      - name: Check Formatting
-        run: cd src/ts && yarn ts-standard ./PreJsPy.ts
-      - name: Check Types
-        run: cd src/ts && yarn tsc --noEmit ./PreJsPy.ts
+        run: make tsdeps
+      - name: Check Formatting & Types
+        run: make tscheck

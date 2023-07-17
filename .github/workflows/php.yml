@@ -20,4 +20,20 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: none
       - name: Run Tests
-        run:  cd src/php && php test.php
+        run:  make php
+  check:
+    name: 'Check Format & Types'
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        architecture: x64
+    - name: Install dependencies
+      run: make pydeps
+    - name: Check & Lint Python
+      run: make pycheck
