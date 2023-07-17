@@ -41,6 +41,8 @@ class ParsingError extends Error {
     this.error = error
     this.expr = expr
     this.index = index
+
+    Object.setPrototypeOf(this, ParsingError.prototype);
   }
 }
 
@@ -467,11 +469,11 @@ export class PreJsPy {
         nodes.push(node)
         continue
       }
-
+ 
       if (this.index < this.length) {
         // If we weren't able to find a binary expression and are out of room, then
         // the expression passed in probably has too much
-        this.throwError('Unexpected "' + this.char() + '"')
+        this.throwError('Unexpected ' + JSON.stringify(this.char()))
       }
     }
 
@@ -535,7 +537,7 @@ export class PreJsPy {
 
     this.gobbleSpaces()
     if (this.charCode() !== CODE_COLON) {
-      this.throwError('Expected :')
+      this.throwError('Expected ' + JSON.stringify(':'))
     }
 
     this.index++
@@ -588,7 +590,7 @@ export class PreJsPy {
 
     const right = this.gobbleToken()
     if (right === null) {
-      this.throwError('Expected expression after ' + binaryOperator)
+      this.throwError('Expected expression after ' + JSON.stringify(binaryOperator))
     }
 
     // Create a stack of expressions and information about the operators between them
@@ -631,7 +633,7 @@ export class PreJsPy {
 
       const node = this.gobbleToken()
       if (node === null) {
-        this.throwError('Expected expression after ' + binaryOperator)
+        this.throwError('Expected expression after ' + JSON.stringify(binaryOperator))
       }
       exprs.push(node)
 
@@ -679,7 +681,7 @@ export class PreJsPy {
 
         const argument = this.gobbleToken()
         if (argument === null) {
-          this.throwError('Expected Expression')
+          this.throwError('Expected expression')
         }
 
         return {
@@ -764,7 +766,7 @@ export class PreJsPy {
 
       const exponent = this.gobbleDecimal()
       if (exponent === '') {
-        this.throwError('Expected exponent (' + number + this.char() + ')')
+        this.throwError('Expected exponent after ' + JSON.stringify(number + this.char()))
       }
 
       number += exponent
@@ -775,7 +777,7 @@ export class PreJsPy {
 
     // can't be a part of an identifier
     if (PreJsPy.isIdentifierStart(chCode)) {
-      this.throwError('Variable names cannot start with a number (' + number + this.char() + ')')
+      this.throwError('Variable names cannot start with a number like ' + JSON.stringify(number + this.char()))
     }
 
     // can't contain another period.
@@ -864,7 +866,7 @@ export class PreJsPy {
     }
 
     if (!closed) {
-      this.throwError('Unclosed quote after "' + str + '"')
+      this.throwError('Unclosed quote after ' + JSON.stringify(str))
     }
 
     if (!this.config.Features.Literals.String) {
@@ -891,7 +893,7 @@ export class PreJsPy {
     const start = this.index
 
     if (!PreJsPy.isIdentifierStart(this.charCode())) {
-      this.throwError('Unexpected ' + this.char())
+      this.throwError('Unexpected ' + JSON.stringify(this.char()))
     }
     this.index++
 
@@ -913,7 +915,7 @@ export class PreJsPy {
     }
 
     if (!this.config.Features.Identifiers) {
-      this.throwError('Unknown literal "' + identifier + '"')
+      this.throwError('Unknown literal ' + JSON.stringify(identifier))
     }
     return {
       type: ExpressionType.IDENTIFIER,
@@ -1002,7 +1004,7 @@ export class PreJsPy {
         this.gobbleSpaces()
         cc = this.charCode()
         if (cc !== CODE_CLOSE_BRACKET) {
-          this.throwError('Unclosed [')
+          this.throwError('Unclosed ' + JSON.stringify('['))
         }
         this.index++
       } else if (cc === CODE_OPEN_PARENTHESES) {
@@ -1038,7 +1040,7 @@ export class PreJsPy {
     this.gobbleSpaces()
 
     if (this.charCode() !== CODE_CLOSE_PARENTHESES) {
-      this.throwError('Unclosed (')
+      this.throwError('Unclosed ' + JSON.stringify('('))
     }
 
     this.index++

@@ -8,7 +8,8 @@ const BASE_PATH = path.join(__dirname, '..', '..', 'tests')
 interface TestCase {
   config: PartialConfig
   input: string
-  output: Expression
+  output?: Expression
+  error?: string
   message: string
 }
 
@@ -54,13 +55,30 @@ class TestPreJsPy {
     instance.SetConfig(test.config) // set config
 
     process.stdout.write('.')
-    const want = this.jsonSerialize(test.output)
-    const got = this.jsonSerialize(instance.Parse(test.input))
 
-    if (want !== got) {
+    // figure out what we are expecting
+    const wantErrorStr = JSON.stringify(test.error ?? null)
+    const wantResult = test.output ?? null
+    const wantResultStr = this.jsonSerialize(wantResult)
+
+    // run the code and figure out what we got
+    const [gotResult, gotError] = instance.TryParse(test.input)
+    const gotResultStr = this.jsonSerialize(gotResult)
+    const gotErrorStr = JSON.stringify(gotError?.message ?? null)
+
+    // check that the errors are identical
+    if (wantErrorStr !== gotErrorStr) {
       console.log('!\nFail\n')
 
-      process.stderr.write('Failed testcase ' + test.message + ':\nGot:      ' + got + '\nExpected: ' + want + '\n')
+      process.stderr.write('Failed testcase ' + test.message + ':\nGot Error:  ' + gotErrorStr + '\nWant Error: ' + wantErrorStr + '\n')
+      process.exit(1)
+    }
+
+    // check that the results are identical
+    if (wantResultStr !== gotResultStr) {
+      console.log('!\nFail\n')
+
+      process.stderr.write('Failed testcase ' + test.message + ':\nGot Result:      ' + gotResultStr + '\nExpected Result: ' + wantResultStr + '\n')
       process.exit(1)
     }
   }

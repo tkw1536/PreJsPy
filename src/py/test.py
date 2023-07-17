@@ -4,6 +4,19 @@ import sys
 import json
 import os.path
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import TypedDict, Optional
+
+    class TestCase(TypedDict):
+        config: "PreJsPy.PartialConfig"
+        input: str
+        output: Optional["PreJsPy.Expression"]
+        error: Optional[str]
+        message: str
+
+
 BASE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "tests")
 
 
@@ -27,42 +40,56 @@ class TestPreJsPy(object):
 
         # and run all the test cases.
         for t in tests:
-            cls.run_single_case(p, t["config"], t["input"], t["output"], t["message"])
+            cls.run_single_case(p, t)
 
         print(" OK")
 
     @classmethod
-    def run_single_case(cls, instance, config, inp, out, message):
+    def run_single_case(cls, instance: "PreJsPy.PreJsPy", test: "TestCase"):
         """Runs a single test case.
         :param instance: PreJsPy instance to test on.
-        :type instance: PreJsPy.PreJsPy
-
-        :param config: Configuration object to apply
-        :type config: dict
-
-        :param inp: Input to parse.
-        :type inp: str
-
-        :param out: Expected output.
-        :type out: dict
-
-        :param message: Message of test case.
-        :type message: str
         """
 
         instance.SetConfig(PreJsPy.PreJsPy.GetDefaultConfig())
-        instance.SetConfig(config)
+        instance.SetConfig(test["config"])
 
         print(".", end="")
-        want = cls.json_serialize(out)
-        got = cls.json_serialize(instance.Parse(inp))
 
-        if want != got:
+        # figure out what we are expecting
+        wantErrorStr = cls.json_serialize(test["error"] if "error" in test else None)
+        wantResult = test["output"] if "output" in test else None
+        wantResultStr = cls.json_serialize(wantResult)
+
+        # run the code and figure out what we got
+        gotResult, gotError = instance.TryParse(test["input"])
+        gotResultStr = cls.json_serialize(gotResult)
+        gotErrorStr = cls.json_serialize(
+            str(gotError) if gotError is not None else None
+        )
+
+        if gotErrorStr != wantErrorStr:
             print("!\nFailed\n")
             sys.stderr.write(
-                "Failed testcase {}:\nGot:      {}\nExpected: {}\n".format(
-                    message, got, want
-                )
+                "Failed testcase "
+                + test["message"]
+                + ":\nGot Error:  "
+                + gotErrorStr
+                + "\nWant Error: "
+                + wantErrorStr
+                + "\n"
+            )
+            sys.exit(1)
+
+        if gotResultStr != wantResultStr:
+            print("!\nFailed\n")
+            sys.stderr.write(
+                "Failed testcase "
+                + test["message"]
+                + ":\nGot Result:      "
+                + gotResultStr
+                + "\nExpected Result: "
+                + wantResultStr
+                + "\n"
             )
             sys.exit(1)
 

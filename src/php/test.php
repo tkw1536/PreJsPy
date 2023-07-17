@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-include "PreJsPy.php";
+include 'PreJsPy.php';
 
 class TestPreJsPy
 {
@@ -20,7 +20,7 @@ class TestPreJsPy
      */
     public static function testFile(string $fn): void
     {
-        echo "Running tests from " . $fn . " ";
+        echo 'Running tests from ' . $fn . ' ';
 
         // Read the test case file
         $tests = json_decode(file_get_contents(self::$BASE_PATH . '/' . $fn), true);
@@ -30,24 +30,40 @@ class TestPreJsPy
 
         // and run all the test cases.
         foreach ($tests as $t) {
-            self::runSingleCase($p, $t["config"], $t["input"], $t["output"], $t["message"]);
+            self::runSingleCase($p, $t);
         }
         echo " OK\n";
     }
 
-    private static function runSingleCase(PreJsPy $instance, array $config, string $inp, array $out, string $message)
+    private static function runSingleCase(PreJsPy $instance, array $test)
     {
         $instance->SetConfig(PreJsPy::GetDefaultConfig());
-        $instance->SetConfig($config);
+        $instance->SetConfig($test['config']);
 
-        echo ".";
+        echo '.';
 
-        // do a quick and dirty comparison using json_encode
-        $got = self::jsonSerialize($instance->Parse($inp));
-        $want = self::jsonSerialize($out);
-        if ($want !== $got) {
-            echo "!\nFailed!\n\n";
-            die("Failed testcase $message:\nGot:      $got\nExpected: $want\n");
+        # figure out what we are expecting
+        $wantErrorStr = self::jsonSerialize(array_key_exists('error', $test) ? $test['error'] : null);
+        $wantResult = array_key_exists('output', $test) ? $test['output'] : null;
+        $wantResultStr = self::jsonSerialize($wantResult);
+
+        # run the code and figure out what we got
+        [$gotResult, $gotError] = $instance->TryParse($test['input']);
+        $gotResultStr = self::jsonSerialize($gotResult);
+        $gotErrorStr = self::jsonSerialize(($gotError !== null) ? $gotError->getMessage() : null);
+
+        if ($gotErrorStr !== $wantErrorStr) {
+            echo "!\nFailed\n";
+            echo 'Failed testcase ' . $test['message'] . ":\nGot Error:  ". $gotErrorStr . "\nWant Error: " . $wantErrorStr . "\n";
+
+            die();
+        }
+
+        if ($gotResultStr != $wantResultStr) {
+            echo "!\nFailed\n";
+            echo 'Failed testcase ' . $test['message'] . ":\nGot Result:  ". $gotResultStr . "\nWant Result: " . $wantResultStr . "\n";
+
+            die();
         }
     }
 
@@ -87,7 +103,7 @@ class TestPreJsPy
 TestPreJsPy::init();
 
 echo "Starting php tests ...\n";
-echo "PHP Version: " . phpversion() . "\n";
+echo 'PHP Version: ' . phpversion() . "\n";
 echo "\n";
 
 // SYMBOLIC

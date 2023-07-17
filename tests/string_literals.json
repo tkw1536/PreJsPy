@@ -34,5 +34,11 @@
     "input": "'\\n\\t\\r\\\"\\''",
     "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "'\\n\\t\\r\\\"\\''", "kind":"string"},
     "message": "escaped single quotes literal"
+  },
+  {
+    "config": {},
+    "input": "\"Unclosed",
+    "error": "Index 9 of \"\\\"Unclosed\": Unclosed quote after \"Unclosed\"",
+    "message": "unclosed string"
   }
 ]

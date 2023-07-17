@@ -1,10 +1,10 @@
 .PHONY: all python pycheck pydeps typescript tsdeps php phplint phpdeps 
 
-all: python node php
+all: python typescript php
 
 
 python:
-	cd src/py/ && python setup.py test
+	cd src/py/ && python test.py
 pydeps:
 	python3 -m pip install mypy black
 pycheck:

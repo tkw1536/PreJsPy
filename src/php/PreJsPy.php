@@ -51,7 +51,7 @@ class ParsingError extends Exception
         $this->expr = $expr;
         $this->index = $index;
 
-        parent::__construct('Index ' . strval($index) . ' of "' . addslashes($expr) . '": ' . $error, 0, null);
+        parent::__construct('Index ' . strval($index) . ' of ' . json_encode($expr) . ': ' . $error, 0, null);
     }
 }
 
@@ -95,7 +95,7 @@ class PreJsPy
     }
 
     // =======================
-    // STATIC HELPER FUNCTIONS
+    // Error Messages
     // =======================
 
     /**
@@ -108,6 +108,10 @@ class PreJsPy
     {
         throw new ParsingError($message, $this->expr, $this->index);
     }
+
+    // =======================
+    // STATIC HELPER FUNCTIONS
+    // =======================
 
     /**
      * Gets the longest key length of an object
@@ -398,7 +402,7 @@ class PreJsPy
 
             // didn't find an expression => something went wrong
             else if ($this->index < $this->length) {
-                $this->throw_error('Unexpected "' . ($this->char()) . '"');
+                $this->throw_error('Unexpected ' . json_encode($this->char()));
             }
         }
 
@@ -465,7 +469,7 @@ class PreJsPy
 
         // need a ':' for the second part of the alternate
         if ($this->charCode() !== self::$CODE_COLON) {
-            $this->throw_error('Expected :');
+            $this->throw_error('Expected ' . json_encode(':'));
         }
 
         $this->index += 1;
@@ -530,7 +534,7 @@ class PreJsPy
 
         $right = $this->gobbleToken();
         if ($right === null) {
-            $this->throw_error('Expected expression after ' . $value);
+            $this->throw_error('Expected expression after ' . json_encode($value));
         }
 
         // create a stack of expressions and information about the operators between them
@@ -567,7 +571,7 @@ class PreJsPy
             // gobble the next token in the tree
             $node = $this->gobbleToken();
             if ($node === null) {
-                $this->throw_error('Expected expression after ' . $value);
+                $this->throw_error('Expected expression after ' . json_encode($value));
             }
             $exprs[] = $node;
 
@@ -712,7 +716,7 @@ class PreJsPy
             // exponent itself
             $exponent = $this->gobbleDecimal();
             if ($exponent === '') {
-                $this->throw_error('Expected exponent (' . $number . $this->char() . ')');
+                $this->throw_error('Expected exponent after ' . json_encode($number . $this->char()));
             }
 
             $number .= $exponent;
@@ -721,7 +725,7 @@ class PreJsPy
         $chCode = $this->charCode();
         // Check to make sure this isn't a variable name that start with a number (123abc)
         if (self::isIdentifierStart($chCode)) {
-            $this->throw_error('Variable names cannot start with a number (' . $number . $this->char() . ')');
+            $this->throw_error('Variable names cannot start with a number like ' . json_encode($number . $this->char()));
         }
         if ($chCode === self::$CODE_PERIOD) {
             $this->throw_error('Unexpected period');
@@ -803,7 +807,7 @@ class PreJsPy
         }
 
         if (!$closed) {
-            $this->throw_error('Unclosed quote after "' . $s . '"');
+            $this->throw_error('Unclosed quote after ' . json_encode($s));
         }
 
         if (!$this->config['Features']['Literals']['String']) {
@@ -833,7 +837,7 @@ class PreJsPy
         $ch = $this->charCode();
 
         if (!self::isIdentifierStart($ch)) {
-            $this->throw_error('Unexpected ' . $this->char());
+            $this->throw_error('Unexpected ' . json_encode($this->char()));
         }
 
         // record where the identifier starts
@@ -861,7 +865,7 @@ class PreJsPy
 
         // if identifiers are disabled, we can bail out
         if (!$this->config["Features"]["Identifiers"]) {
-            $this->throw_error('Unknown literal "' . $identifier . '"');
+            $this->throw_error('Unknown literal ' . json_encode($identifier));
         }
 
         // found the identifier
@@ -970,7 +974,7 @@ class PreJsPy
 
                 $ch_i = $this->charCode();
                 if ($ch_i !== self::$CODE_CLOSE_BRACKET) {
-                    $this->throw_error('Unclosed [');
+                    $this->throw_error('Unclosed ' . json_encode('['));
                 }
 
                 $this->index += 1;
