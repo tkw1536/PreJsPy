@@ -1,8 +1,8 @@
 # PreJsPy
 
 [![Python Build Status](https://github.com/tkw1536/PreJsPy/actions/workflows/python.yml/badge.svg)](https://github.com/tkw1536/PreJsPy/actions/workflows/python.yml)
-
-[![JavaScript Build Status](https://github.com/tkw1536/PreJsPy/actions/workflows/ts.yml/badge.svg)](https://github.com/tkw1536/PreJsPy/actions/workflows/ts.yml)
+[![TypeScript Build Status](https://github.com/tkw1536/PreJsPy/actions/workflows/ts.yml/badge.svg)](https://github.com/tkw1536/PreJsPy/actions/workflows/ts.yml)
+[![PHP Build Status](https://github.com/tkw1536/PreJsPy/actions/workflows/php.yml/badge.svg)](https://github.com/tkw1536/PreJsPy/actions/workflows/php.yml)
 
 ## What is this?
 
