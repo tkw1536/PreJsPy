@@ -564,24 +564,14 @@ class PreJsPy(object):
     # This function is responsible for gobbling an individual expression,
     # e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
     def __gobbleBinaryExpression(self) -> Optional["Expression"]:
-        # First, try to get the leftmost thing
-        # Then, check to see if there's a binary operator operating on that leftmost thing
+        # get the leftmost token of a binary expression or bail out
         left = self.__gobbleToken()
-        value = self.__gobbleBinaryOp()
-
-        # If there wasn't a binary operator, just return the leftmost node
-        if value is None or left is None:
+        if left is None:
             return left
 
-        right = self.__gobbleToken()
-        if not right:
-            self.__throw_error("Expected expression after " + json.dumps(value))
-
-        # create a stack of expressions and information about the operators between them
-        exprs = [left, right]
-        ops = [
-            {"value": value, "precedence": self.__binaryPrecedence(value)}
-        ]  # type: List[_BinaryOperatorInfo]
+        exprs = [left]  # a list of expressions
+        # and a list of binary operators between them
+        ops = []  # type: List[_BinaryOperatorInfo]
 
         # Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
         while True:

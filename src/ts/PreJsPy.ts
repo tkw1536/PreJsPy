@@ -583,26 +583,14 @@ export class PreJsPy {
   // This function is responsible for gobbling an individual expression,
   // e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
   private gobbleBinaryExpression (): Expression | null {
-    // First, try to get the leftmost thing
-    // Then, check to see if there's a binary operator operating on that leftmost thing
+    // get the leftmost token of a binary expression or bail out
     const left = this.gobbleToken()
-    const binaryOperator = this.gobbleBinaryOp()
-
-    // If there wasn't a binary operator, just return the leftmost node
-    if (binaryOperator === null || left === null) {
-      return left
+    if (left === null) {
+      return null
     }
 
-    const right = this.gobbleToken()
-    if (right === null) {
-      this.throwError('Expected expression after ' + JSON.stringify(binaryOperator))
-    }
-
-    // Create a stack of expressions and information about the operators between them
-    const exprs = [left, right]
-    const ops = [
-      { value: binaryOperator, precedence: this.binaryPrecedence(binaryOperator) }
-    ]
+    const exprs = [left] // a list of expressions
+    const ops = [] // and a list of binary operators between them
 
     // Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
     while (true) {
@@ -632,8 +620,7 @@ export class PreJsPy {
           operator: op.value,
           left,
           right
-        }
-        )
+        })
       }
 
       const node = this.gobbleToken()

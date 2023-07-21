@@ -524,26 +524,14 @@ class PreJsPy
      */
     public function gobbleBinaryExpression(): array|null
     {
-        // First, try to get the leftmost thing
-        // Then, check to see if there's a binary operator operating on that leftmost thing
+        // Get the leftmost token of a binary expression or bail out
         $left = $this->gobbleToken();
-        $value = $this->gobbleBinaryOp();
-
-        // If there wasn't a binary operator, just return the leftmost node
-        if ($value === null || $left === null) {
-            return $left;
+        if ($left === null) {
+            return null;
         }
 
-        $right = $this->gobbleToken();
-        if ($right === null) {
-            $this->throw_error('Expected expression after ' . json_encode($value));
-        }
-
-        // create a stack of expressions and information about the operators between them
-        $exprs = [$left, $right];
-        $ops = [
-            ['value' => $value, 'precedence' => $this->binaryPrecedence($value)]
-        ];
+        $exprs = [$left]; // a list of expressions
+        $ops = []; // and a list of binary operators between them
 
         // Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
         while (True) {
