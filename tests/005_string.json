@@ -14,7 +14,7 @@
     {
         "config": {"Features": {"Literals": {"String": false}}},
         "input": "\"Hello world\"",
-        "error": "Index 0 of \"\\\"Hello world\\\"\": Unexpected string literal",
+        "error": "Index 0 of \"\\\"Hello world\\\"\": Unexpected \"\\\"\"",
         "message": "string literal not enabled"
     },
     {

@@ -8,7 +8,7 @@
   {
     "config": {"Features": {"Literals": {"Numeric": false, "NumericSeparator": ""}}},
     "input": "1",
-    "error": "Index 0 of \"1\": Unexpected numeric literal",
+    "error": "Index 0 of \"1\": Unexpected \"1\"",
     "message": "numeric literals not enabled"
   },
   {

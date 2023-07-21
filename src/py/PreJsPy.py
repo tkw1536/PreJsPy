@@ -484,7 +484,7 @@ class PreJsPy(object):
 
         # didn't find an expression => something went wrong
         if self.__index < self.__length:
-            self.__throw_error('Unexpected "' + (self.__char()) + '"')
+            self.__throw_error('Unexpected ' + json.dumps(self.__char()))
 
         # If there is only one expression, return it as is
         if len(nodes) == 1:
@@ -626,13 +626,23 @@ class PreJsPy(object):
         self.__gobbleSpaces()
         ch = self.__charCode()
 
-        if self.__isDecimalDigit(ch) or ch == PreJsPy.CODE_PERIOD:
-            # Char code 46 is a dot `.` which can start off a numeric literal
+        # numeric literals
+        if self.__config["Features"]["Literals"]["Numeric"] and (
+            self.__isDecimalDigit(ch) or ch == PreJsPy.CODE_PERIOD
+        ):
             return self.__gobbleNumericLiteral()
-        elif ch == PreJsPy.CODE_SINGLE_QUOTE or ch == PreJsPy.CODE_DOUBLE_QUOTE:
-            # Single or double quotes
+
+        # single or double quoted strings
+        if self.__config["Features"]["Literals"]["String"] and (
+            ch == PreJsPy.CODE_SINGLE_QUOTE or ch == PreJsPy.CODE_DOUBLE_QUOTE
+        ):
             return self.__gobbleStringLiteral()
-        elif ch == PreJsPy.CODE_OPEN_BRACKET:
+
+        # array literal
+        if (
+            self.__config["Features"]["Literals"]["Array"]
+            and ch == PreJsPy.CODE_OPEN_BRACKET
+        ):
             return self.__gobbleArray()
 
         to_check = self.__expr[self.__index : self.__index + self.__unaryOperatorLength]
@@ -725,10 +735,6 @@ class PreJsPy(object):
                 + json.dumps(number + self.__char()),
             )
 
-        if not self.__config["Features"]["Literals"]["Numeric"]:
-            self.__index = start
-            self.__throw_error("Unexpected numeric literal")
-
         # parse the float value and get the literal (if needed)
         value = float(number)
         if self.__config["Features"]["Literals"]["NumericSeparator"] != "":
@@ -789,9 +795,6 @@ class PreJsPy(object):
 
         if not closed:
             self.__throw_error("Unclosed quote after " + json.dumps(s))
-        if not self.__config["Features"]["Literals"]["String"]:
-            self.__index = start
-            self.__throw_error("Unexpected string literal")
 
         return {
             "type": ExpressionType.LITERAL,
@@ -988,9 +991,6 @@ class PreJsPy(object):
     # This function assumes that it needs to gobble the opening bracket
     # and then tries to gobble the expressions as arguments.
     def __gobbleArray(self) -> "Ary":
-        if not self.__config["Features"]["Literals"]["Array"]:
-            self.__throw_error("Unexpected array literal")
-
         self.__index += 1
 
         return {

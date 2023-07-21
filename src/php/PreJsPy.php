@@ -597,13 +597,18 @@ class PreJsPy
         $this->gobbleSpaces();
         $ch = $this->charCode();
 
-        if (self::isDecimalDigit($ch) || $ch === self::$CODE_PERIOD) {
-            // Char code 46 is a dot `.` which can start off a numeric literal
+        // numeric literals
+        if ($this->config['Features']['Literals']['Numeric'] && (self::isDecimalDigit($ch) || $ch === self::$CODE_PERIOD)) {
             return $this->gobbleNumericLiteral();
-        } else if ($ch === self::$CODE_SINGLE_QUOTE || $ch === self::$CODE_DOUBLE_QUOTE) {
-            // single or double quotes
+        }
+        
+        // single or double quoted strings
+        if ($this->config['Features']['Literals']['String'] && ($ch === self::$CODE_SINGLE_QUOTE || $ch === self::$CODE_DOUBLE_QUOTE)) {
             return $this->gobbleStringLiteral();
-        } else if ($ch === self::$CODE_OPEN_BRACKET) {
+        }
+        
+        // array literal
+        if ($this->config['Features']['Literals']['Array'] && $ch === self::$CODE_OPEN_BRACKET) {
             return $this->gobbleArray();
         }
 
@@ -717,10 +722,6 @@ class PreJsPy
         if (self::isIdentifierStart($chCode)) {
             $this->throw_error('Variable names cannot start with a number like ' . json_encode($number . $this->char()));
         }
-        if (!$this->config['Features']['Literals']['Numeric']) {
-            $this->index = $start;
-            $this->throw_error('Unexpected numeric literal');
-        }
 
         // parse the float value and get the literal (if needed)
         $value = (float)($number);
@@ -795,11 +796,6 @@ class PreJsPy
 
         if (!$closed) {
             $this->throw_error('Unclosed quote after ' . json_encode($s));
-        }
-
-        if (!$this->config['Features']['Literals']['String']) {
-            $this->index = $start;
-            $this->throw_error('Unexpected string literal');
         }
 
         return [
@@ -1048,10 +1044,6 @@ class PreJsPy
      */
     private function gobbleArray(): array
     {
-        if (!$this->config['Features']['Literals']['Array']) {
-            $this->throw_error('Unexpected array literal');
-        }
-
         $this->index += 1;
 
         return [

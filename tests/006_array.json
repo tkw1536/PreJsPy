@@ -50,7 +50,7 @@
   {
     "config": {"Features": {"Literals": {"Array": false}}},
     "input": "[]",
-    "error": "Index 0 of \"[]\": Unexpected array literal",
+    "error": "Index 0 of \"[]\": Unexpected \"[\"",
     "message": "arrays disabled"
   },
   {

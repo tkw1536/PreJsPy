@@ -655,13 +655,18 @@ export class PreJsPy {
     this.gobbleSpaces()
     const ch = this.charCode()
 
-    if (PreJsPy.isDecimalDigit(ch) || ch === CODE_PERIOD) {
-      // Char code 46 is a dot `.` which can start off a numeric literal
+    // numeric literals
+    if (this.config.Features.Literals.Numeric && (PreJsPy.isDecimalDigit(ch) || ch === CODE_PERIOD)) {
       return this.gobbleNumericLiteral()
-    } else if (ch === CODE_SINGLE_QUOTE || ch === CODE_DOUBLE_QUOTE) {
-      // Single or double quotes
+    }
+
+    // single or double quoted strings
+    if (this.config.Features.Literals.String && (ch === CODE_SINGLE_QUOTE || ch === CODE_DOUBLE_QUOTE)) {
       return this.gobbleStringLiteral()
-    } else if (ch === CODE_OPEN_BRACKET) {
+    }
+
+    // array literal
+    if (this.config.Features.Literals.Array && ch === CODE_OPEN_BRACKET) {
       return this.gobbleArray()
     }
 
@@ -772,11 +777,6 @@ export class PreJsPy {
       this.throwError('Variable names cannot start with a number like ' + JSON.stringify(number + this.char()))
     }
 
-    if (!this.config.Features.Literals.Numeric) {
-      this.index -= number.length
-      this.throwError('Unexpected numeric literal')
-    }
-
     // Parse the float value and get the literal (if needed)
     const value = parseFloat(number)
     if (this.config.Features.Literals.NumericSeparator !== '') {
@@ -854,11 +854,6 @@ export class PreJsPy {
 
     if (!closed) {
       this.throwError('Unclosed quote after ' + JSON.stringify(str))
-    }
-
-    if (!this.config.Features.Literals.String) {
-      this.index = start
-      this.throwError('Unexpected string literal')
     }
 
     return {
@@ -1068,10 +1063,6 @@ export class PreJsPy {
      * and then tries to gobble the expressions as arguments.
      */
   private gobbleArray (): Ary {
-    if (!this.config.Features.Literals.Array) {
-      this.throwError('Unexpected array literal')
-    }
-
     this.index++
 
     return {
