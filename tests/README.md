@@ -24,3 +24,6 @@ interface TestCase {
   message: string
 }
 ```
+
+A manifest of all files can be found in `_manifest.json`.
+This file is automatically read by all the testing code to find all other test files.

@@ -106,25 +106,11 @@ echo "Starting php tests ...\n";
 echo 'PHP Version: ' . phpversion() . "\n";
 echo "\n";
 
-// SYMBOLIC
-TestPreJsPy::testFile('constant_symbolic.json');
-TestPreJsPy::testFile('identifier_symbolic.json');
-
-// LITERALS
-TestPreJsPy::testFile('number_literals.json');
-TestPreJsPy::testFile('string_literals.json');
-TestPreJsPy::testFile('array_literals.json');
-
-// OPERATORS
-TestPreJsPy::testFile('unary_ops.json');
-TestPreJsPy::testFile('binary_ops.json');
-
-// CALLS & COMPOUNDS
-TestPreJsPy::testFile('call.json');
-TestPreJsPy::testFile('compound.json');
-
-// PRECEDENCES
-TestPreJsPy::testFile('precedence.json');
+/** @var string[] */
+$files = json_decode(file_get_contents(TestPreJsPy::$BASE_PATH . '/' . '_manifest.json'), true);
+foreach ($files as $file) {
+    TestPreJsPy::testFile($file);
+}
 
 echo "\n";
 echo "Done. \n";

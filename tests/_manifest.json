@@ -1,0 +1,13 @@
+[
+    "array_literals.json",
+    "number_literals.json",
+    "identifier_symbolic.json",
+    "constant_symbolic.json",
+    "unary_ops.json",
+    "precedence.json",
+    "string_literals.json",
+    "call.json",
+    "compound.json",
+    "binary_ops.json"
+]
+

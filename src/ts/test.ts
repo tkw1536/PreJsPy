@@ -109,25 +109,8 @@ console.log('Starting TypeScript tests ...')
 console.log('Node Version: ' + process.version)
 console.log('')
 
-// SYMBOLIC
-TestPreJsPy.testFile('constant_symbolic.json')
-TestPreJsPy.testFile('identifier_symbolic.json')
-
-// LITERALS
-TestPreJsPy.testFile('number_literals.json')
-TestPreJsPy.testFile('string_literals.json')
-TestPreJsPy.testFile('array_literals.json')
-
-// OPERATORS
-TestPreJsPy.testFile('unary_ops.json')
-TestPreJsPy.testFile('binary_ops.json')
-
-// CALLS & COMPOUNDS
-TestPreJsPy.testFile('call.json')
-TestPreJsPy.testFile('compound.json')
-
-// PRECEDENCES
-TestPreJsPy.testFile('precedence.json')
+const files: string[] = JSON.parse(readFileSync(path.join(BASE_PATH, '_manifest.json'), 'utf8'))
+files.forEach(file => TestPreJsPy.testFile(file))
 
 console.log('')
 console.log('Done.')

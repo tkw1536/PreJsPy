@@ -116,25 +116,11 @@ print("Starting Python tests ...")
 print("Python Info: {}".format(sys.implementation))
 print("")
 
-# SYMBOLIC
-TestPreJsPy.test_file("constant_symbolic.json")
-TestPreJsPy.test_file("identifier_symbolic.json")
+with open(os.path.join(BASE_PATH, "_manifest.json"), "r") as f:
+    files = json.load(f)
 
-# LITERALS
-TestPreJsPy.test_file("number_literals.json")
-TestPreJsPy.test_file("string_literals.json")
-TestPreJsPy.test_file("array_literals.json")
-
-# OPERATORS
-TestPreJsPy.test_file("unary_ops.json")
-TestPreJsPy.test_file("binary_ops.json")
-
-# CALLS & COMPOUNDS
-TestPreJsPy.test_file("call.json")
-TestPreJsPy.test_file("compound.json")
-
-# PRECEDENCES
-TestPreJsPy.test_file("precedence.json")
+for file in files:
+    TestPreJsPy.test_file(file)
 
 print("")
 print("Done.")
