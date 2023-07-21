@@ -1,0 +1,38 @@
+[
+    {
+        "config": {"Features": {"Identifiers": true, "Conditional": true}},
+        "input": "a ? b : c",
+        "output": {"alternate": {"name": "c", "type": "Identifier"}, "consequent": {"name": "b", "type": "Identifier"}, "test": {"name": "a", "type": "Identifier"}, "type": "ConditionalExpression"},
+        "message": "conditional expression"
+    },
+    {
+        "config": {"Features": {"Identifiers": true, "Conditional": true}},
+        "input": "a?b:c",
+        "output": {"alternate": {"name": "c", "type": "Identifier"}, "consequent": {"name": "b", "type": "Identifier"}, "test": {"name": "a", "type": "Identifier"}, "type": "ConditionalExpression"},
+        "message": "tight conditional expression"
+    },
+    {
+        "config": {"Features": {"Identifiers": true, "Conditional": true}},
+        "input": "a?",
+        "error": "Index 2 of \"a?\": Expected expression",
+        "message": "partial conditional"
+    },
+    {
+        "config": {"Features": {"Identifiers": true, "Conditional": true}},
+        "input": "a?b",
+        "error": "Index 3 of \"a?b\": Expected \":\"",
+        "message": "partial conditional (2)"
+    },
+    {
+        "config": {"Features": {"Identifiers": true, "Conditional": true}},
+        "input": "a?b:",
+        "error": "Index 4 of \"a?b:\": Expected expression",
+        "message": "partial conditional (3)"
+    },
+    {
+        "config": {"Features": {"Identifiers": true, "Conditional": false}},
+        "input": "a ? b : c",
+        "error": "Index 2 of \"a ? b : c\": Unexpected \"?\"",
+        "message": "conditional not enabled"
+    }
+]

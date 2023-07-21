@@ -1,0 +1,44 @@
+[
+  {
+    "config": {"Operators": {"Literals": {"true": true}}},
+    "input": "true",
+    "output": {"raw": "true", "value": true, "type": "Literal"},
+    "message": "literal true"
+  },
+  {
+    "config": {"Operators": {"Literals": {}}, "Features": {"Identifiers": false}},
+    "input": "true",
+    "error": "Index 4 of \"true\": Unknown literal \"true\"",
+    "message": "no identifiers, no literals"
+  },
+  {
+    "config": {"Operators": {"Literals": {"t": "t", "tt": "tt"}}},
+    "input": "tt",
+    "output": {"raw":"tt","type":"Literal","value":"tt"},
+    "message": "literal constants"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}},
+    "input": "a",
+    "output": {"name": "a", "type": "Identifier"},
+    "message": "single-character identifier"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}},
+    "input": "ä",
+    "output": {"name": "ä", "type": "Identifier"},
+    "message": "single-character non-ascii identifier"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}},
+    "input": "hello$_world",
+    "output": {"name": "hello$_world", "type": "Identifier"},
+    "message": "multi-character-identifier"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}},
+    "input": "wät",
+    "output": {"name": "wät", "type": "Identifier"},
+    "message": "multi-character non-ascii identifier"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "config": {"Features": {"Identifiers": true, "Members": {"Static": true}}},
+    "input": "hello.world",
+    "output": {"object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression", "computed": false, "property": {"name": "world", "type": "Identifier"}},
+    "message": "static member access"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Members": {"Static": true}}},
+    "input": "hello.",
+    "error": "Index 6 of \"hello.\": Expected literal",
+    "message": "trailing dot"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Members": {"Static": false}}},
+    "input": "hello.world",
+    "error": "Index 6 of \"hello.world\": Unexpected static MemberExpression",
+    "message": "no static member access"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Literals": {"String": true}, "Members": {"Computed": true}}},
+    "input": "hello[\"world\"]",
+    "output": {"property": {"raw": "\"world\"", "value": "world", "type": "Literal", "kind": "string"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
+    "message": "computed member access via square bracket double string"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Members": {"Computed": true}}},
+    "input": "hello[world]",
+    "output": {"property": {"name": "world", "type": "Identifier"}, "computed": true, "object": {"name": "hello", "type": "Identifier"}, "type": "MemberExpression"},
+    "message": "computed member access via square bracket single identifier"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Literals": {"String": true}, "Members": {"Computed": false}}},
+    "input": "hello[\"world\"]",
+    "error": "Index 6 of \"hello[\\\"world\\\"]\": Unexpected computed MemberExpression",
+    "message": "computed member access not enabled"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Members": {"Computed": true}}},
+    "input": "hello[world",
+    "error": "Index 11 of \"hello[world\": Unclosed \"[\"",
+    "message": "unclosed computed member access"
+  }
+]

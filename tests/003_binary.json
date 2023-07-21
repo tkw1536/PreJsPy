@@ -1,0 +1,80 @@
+[
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"@@": 1}}},
+    "input": "a @@ b",
+    "output": {"operator": "@@", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "two character binary operator @@"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"@": 1}}},
+    "input": "a @ b",
+    "output": {"operator": "@", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "single character binary operator @"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"@": 1}}},
+    "input": "a @ b @ c",
+    "output": {"left": {"name": "a", "type": "Identifier"}, "operator": "@", "right": {"left": {"name": "b", "type": "Identifier"}, "operator": "@", "right": {"name": "c", "type": "Identifier"}, "type": "BinaryExpression"}, "type": "BinaryExpression"},
+    "message": "repeated binary operator character binary operator @"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"@": 1}}},
+    "input": "a@b",
+    "output": {"operator": "@", "left": {"name": "a", "type": "Identifier"}, "type": "BinaryExpression", "right": {"name": "b", "type": "Identifier"}},
+    "message": "tight binary operator @"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"@": 1}}},
+    "input": "a@",
+    "error":  "Index 2 of \"a@\": Expected expression after \"@\"",
+    "message": "binary operator missing operand"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"*": 2, "+": 1}}},
+    "input": "a + b * c",
+    "output": {"left": {"name": "a", "type": "Identifier"}, "operator": "+", "right": {"left": {"name": "b", "type": "Identifier"}, "operator": "*", "right": {"name": "c", "type": "Identifier"}, "type": "BinaryExpression"}, "type": "BinaryExpression"},
+    "message": "strong *, weak +"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"*": 2, "+": 1}}},
+    "input": "(a + b) * c",
+    "output": {"left": {"left": {"name": "a", "type": "Identifier"}, "operator": "+", "right": {"name": "b", "type": "Identifier"}, "type": "BinaryExpression"}, "operator": "*", "right": {"name": "c", "type": "Identifier"}, "type": "BinaryExpression"},
+    "message": "brackets"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"*": 2, "+": 1}}},
+    "input": "(a + (b)) * (c)",
+    "output": {"left": {"left": {"name": "a", "type": "Identifier"}, "operator": "+", "right": {"name": "b", "type": "Identifier"}, "type": "BinaryExpression"}, "operator": "*", "right": {"name": "c", "type": "Identifier"}, "type": "BinaryExpression"},
+    "message": "lots of brackets"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"*": 2, "+": 1}}},
+    "input": "(a",
+    "error": "Index 2 of \"(a\": Unclosed \"(\"",
+    "message": "unclosed brackets"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"*": 2, "+": 1}}},
+    "input": "((a)+b",
+    "error": "Index 6 of \"((a)+b\": Unclosed \"(\"",
+    "message": "unclosed brackets (2)"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"*": 1, "+": 2}}},
+    "input": "a + b * c",
+    "output": {"left": {"left": {"name": "a", "type": "Identifier"}, "operator": "+", "right": {"name": "b", "type": "Identifier"}, "type": "BinaryExpression"}, "operator": "*", "right": {"name": "c", "type": "Identifier"}, "type": "BinaryExpression"},
+    "message": "strong +, weak *"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"*": 2, "+": 1}}},
+    "input": "a + b * c + d * e",
+    "output": {"left": {"name": "a", "type": "Identifier"}, "operator": "+", "right": {"left": {"left": {"name": "b", "type": "Identifier"}, "operator": "*", "right": {"name": "c", "type": "Identifier"}, "type": "BinaryExpression"}, "operator": "+", "right": {"left": {"name": "d", "type": "Identifier"}, "operator": "*", "right": {"name": "e", "type": "Identifier"}, "type": "BinaryExpression"}, "type": "BinaryExpression"}, "type": "BinaryExpression"},
+    "message": "complex binary expression"
+  },
+  {
+    "config": {"Features": {"Identifiers": true}, "Operators": {"Binary": {"@": 2, "@@": 1}}},
+    "input": "a @@ b @ c",
+    "output": {"left": {"name": "a", "type": "Identifier"}, "operator": "@@", "right": {"left": {"name": "b", "type": "Identifier"}, "operator": "@", "right": {"name": "c", "type": "Identifier"}, "type": "BinaryExpression"}, "type": "BinaryExpression"},
+    "message": "conflicting binary expressions"
+  }
+]

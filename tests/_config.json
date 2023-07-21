@@ -1,0 +1,23 @@
+{
+    "Operators": {
+        "Literals": {},
+        "Unary": [],
+        "Binary": {}
+    },
+    "Features": {
+        "Compound": false,
+        "Conditional": false,
+        "Identifiers": false,
+        "Calls": false,
+        "Members": {
+            "Static": false,
+            "Computed": false
+        },
+        "Literals": {
+            "Numeric": false,
+            "NumericSeparator": "",
+            "String": false,
+            "Array": false
+        }
+    }
+}

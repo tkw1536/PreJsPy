@@ -6,10 +6,20 @@ include 'PreJsPy.php';
 
 class TestPreJsPy
 {
-    public static string $BASE_PATH;
+    private static string $BASE_PATH;
     public static function init()
     {
         self::$BASE_PATH = join('/', [dirname(__FILE__), '..', '..', 'tests']);
+    }
+
+    /**
+     * Parses a json file from the tests directory
+     *
+     * @param string $filename name of file to read
+     * @return mixed
+     */
+    public static function parseJSONFile(string $filename): mixed {
+        return json_decode(file_get_contents(self::$BASE_PATH . '/' . $filename), true);
     }
 
     /**
@@ -23,7 +33,7 @@ class TestPreJsPy
         echo 'Running tests from ' . $fn . ' ';
 
         // Read the test case file
-        $tests = json_decode(file_get_contents(self::$BASE_PATH . '/' . $fn), true);
+        $tests = self::parseJSONFile($fn);
 
         // Create a new PreJSPy() instance.
         $p = new PreJsPy();
@@ -37,7 +47,7 @@ class TestPreJsPy
 
     private static function runSingleCase(PreJsPy $instance, array $test)
     {
-        $instance->SetConfig(PreJsPy::GetDefaultConfig());
+        $instance->SetConfig(self::parseJSONFile('_config.json'));
         $instance->SetConfig($test['config']);
 
         echo '.';
@@ -107,7 +117,7 @@ echo 'PHP Version: ' . phpversion() . "\n";
 echo "\n";
 
 /** @var string[] */
-$files = json_decode(file_get_contents(TestPreJsPy::$BASE_PATH . '/' . '_manifest.json'), true);
+$files = TestPreJsPy::parseJSONFile('_manifest.json');
 foreach ($files as $file) {
     TestPreJsPy::testFile($file);
 }

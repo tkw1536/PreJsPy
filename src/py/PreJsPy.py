@@ -1,6 +1,6 @@
 """
-    (c) Tom Wiesing 2016-20, licensed under MIT license
-    This code is insprired by the JavaScript version JSEP
+    (c) Tom Wiesing 2016-23, licensed under MIT license
+    This code is inspired by the JavaScript version JSEP
     The original code is (c) 2013 Stephen Oney, http://jsep.from.so/ and
     licensed under MIT
 """
@@ -155,7 +155,7 @@ if TYPE_CHECKING:
 
     class _Features(TypedDict):
         Compound: bool
-        Tertiary: bool
+        Conditional: bool
         Identifiers: bool
         Calls: bool
         Members: _Members
@@ -163,7 +163,7 @@ if TYPE_CHECKING:
 
     class _PartialFeatures(TypedDict, total=False):
         Compound: bool
-        Tertiary: bool
+        Conditional: bool
         Identifiers: bool
         Calls: bool
         Members: _PartialMembers
@@ -308,7 +308,7 @@ class PreJsPy(object):
             },
             "Features": {
                 "Compound": self.__config["Features"]["Compound"],
-                "Tertiary": self.__config["Features"]["Tertiary"],
+                "Conditional": self.__config["Features"]["Conditional"],
                 "Identifiers": self.__config["Features"]["Identifiers"],
                 "Calls": self.__config["Features"]["Calls"],
                 "Members": self.__config["Features"]["Members"].copy(),
@@ -347,9 +347,9 @@ class PreJsPy(object):
                     self.__config["Features"]["Compound"] = config["Features"][
                         "Compound"
                     ]
-                if "Tertiary" in config["Features"]:
-                    self.__config["Features"]["Tertiary"] = config["Features"][
-                        "Tertiary"
+                if "Conditional" in config["Features"]:
+                    self.__config["Features"]["Conditional"] = config["Features"][
+                        "Conditional"
                     ]
                 if "Identifiers" in config["Features"]:
                     self.__config["Features"]["Identifiers"] = config["Features"][
@@ -477,12 +477,14 @@ class PreJsPy(object):
 
             # Try to gobble each expression individually
             node = self.__gobbleExpression()
-            if node:
-                nodes.append(node)
+            if node is None:
+                break
 
-            # didn't find an expression => something went wrong
-            elif self.__index < self.__length:
-                self.__throw_error('Unexpected "' + (self.__char()) + '"')
+            nodes.append(node)
+
+        # didn't find an expression => something went wrong
+        if self.__index < self.__length:
+            self.__throw_error('Unexpected "' + (self.__char()) + '"')
 
         # If there is only one expression, return it as is
         if len(nodes) == 1:
@@ -504,9 +506,9 @@ class PreJsPy(object):
     def __gobbleExpression(self) -> Optional["Expression"]:
         """Main parsing function to parse any kind of expression"""
 
-        # This function attempts to parse a tertiary expression or a binary expression.
-        # But if the tertiary is turned of, we can go right into binary expressions.
-        if not self.__config["Features"]["Tertiary"]:
+        # This function attempts to parse a conditional expression or a binary expression.
+        # But if the conditional is turned of, we can go right into binary expressions.
+        if not self.__config["Features"]["Conditional"]:
             return self.__gobbleBinaryExpression()
 
         test = self.__gobbleBinaryExpression()
@@ -526,7 +528,7 @@ class PreJsPy(object):
 
         # need a ':' for the second part of the alternate
         if self.__charCode() != PreJsPy.CODE_COLON:
-            self.__throw_error("Expected :")
+            self.__throw_error("Expected " + json.dumps(":"))
 
         self.__index += 1
         alternate = self.__gobbleExpression()
@@ -573,7 +575,7 @@ class PreJsPy(object):
 
         right = self.__gobbleToken()
         if not right:
-            self.__throw_error("Expected expression after " + value)
+            self.__throw_error("Expected expression after " + json.dumps(value))
 
         # create a stack of expressions and information about the operators between them
         exprs = [left, right]
@@ -607,7 +609,7 @@ class PreJsPy(object):
             # gobble the next token in the tree
             node = self.__gobbleToken()
             if node is None:
-                self.__throw_error("Expected expression after " + value)
+                self.__throw_error("Expected expression after " + json.dumps(value))
             exprs.append(node)
 
             # and store the info about the operator
@@ -650,7 +652,7 @@ class PreJsPy(object):
                 self.__index += tc_len
                 argument = self.__gobbleToken()
                 if argument is None:
-                    self.__throw_error("Expected argument to unary expression")
+                    self.__throw_error("Expected argument for unary expression")
 
                 return {
                     "type": ExpressionType.UNARY_EXP,
@@ -719,7 +721,9 @@ class PreJsPy(object):
             # exponent itself
             exponent = self.__gobbleDecimal()
             if exponent == "":
-                self.__throw_error("Expected exponent (" + number + self.__char() + ")")
+                self.__throw_error(
+                    "Expected exponent after " + json.dumps(number + self.__char())
+                )
 
             number += exponent
 
@@ -727,10 +731,8 @@ class PreJsPy(object):
         # Check to make sure this isn't a variable name that start with a number (123abc)
         if PreJsPy.__isIdentifierStart(chCode):
             self.__throw_error(
-                "Variable names cannot start with a number ("
-                + number
-                + self.__char()
-                + ")",
+                "Variable names cannot start with a number like "
+                + json.dumps(number + self.__char()),
             )
         if chCode == PreJsPy.CODE_PERIOD:
             self.__throw_error("Unexpected period")
@@ -816,9 +818,12 @@ class PreJsPy(object):
     # (e.g. `true`, `false`, `null`)
     def __gobbleIdentifier(self) -> "Union[Literal, Identifier]":
         # can't gobble an identifier if the first character isn't the start of one.
-        ch = self.__charCode()
-        if not PreJsPy.__isIdentifierStart(ch):
-            self.__throw_error("Unexpected " + self.__char())
+        cc = self.__charCode()
+        if cc == -1:
+            self.__throw_error("Expected literal")
+
+        if not PreJsPy.__isIdentifierStart(cc):
+            self.__throw_error("Unexpected " + json.dumps(self.__char()))
 
         # record where the identifier starts
         start = self.__index
@@ -826,8 +831,8 @@ class PreJsPy(object):
 
         # continue scanning the literal
         while self.__index < self.__length:
-            ch = self.__charCode()
-            if not PreJsPy.__isIdentifierPart(ch):
+            cc = self.__charCode()
+            if not PreJsPy.__isIdentifierPart(cc):
                 break
 
             self.__index += 1
@@ -853,28 +858,46 @@ class PreJsPy(object):
     # `(` or `[` has already been gobbled, and gobbles expressions and commas
     # until the terminator character `)` or `]` is encountered.
     # e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
-    def __gobbleArguments(self, termination: int) -> List["Expression"]:
+    def __gobbleArguments(self, start: str, termination: int) -> List["Expression"]:
         args = []  # type: List[Expression]
+
+        closed = False  # is the expression closed?
+        hadComma = False  # did we have a comma in the last iteration?
 
         while self.__index < self.__length:
             self.__gobbleSpaces()
             ch_i = self.__charCode()
 
             if ch_i == termination:
+                closed = True
                 self.__index += 1
                 break
 
             # between expressions
             if ch_i == PreJsPy.CODE_COMMA:
+                if hadComma:
+                    self.__throw_error("Duplicate " + json.dumps(","))
+                hadComma = True
                 self.__index += 1
                 continue
+
+            wantsComma = len(args) > 0
+            if wantsComma != hadComma:
+                if wantsComma:
+                    self.__throw_error("Expected " + json.dumps(","))
+                else:
+                    self.__throw_error("Unexpected " + json.dumps(","))
 
             node = self.__gobbleExpression()
 
             if (node is None) or node["type"] == ExpressionType.COMPOUND:
-                self.__throw_error("Expected comma")
+                self.__throw_error("Expected " + json.dumps(","))
 
             args.append(node)
+            hadComma = False
+
+        if not closed:
+            self.__throw_error("Unclosed " + json.dumps(start))
 
         return args
 
@@ -936,7 +959,7 @@ class PreJsPy(object):
                 ch_i = self.__charCode()
 
                 if ch_i != PreJsPy.CODE_CLOSE_BRACKET:
-                    self.__throw_error("Unclosed [")
+                    self.__throw_error("Unclosed " + json.dumps("["))
 
                 self.__index += 1
             elif ch_i == PreJsPy.CODE_OPEN_PARENTHESES:
@@ -945,7 +968,9 @@ class PreJsPy(object):
                 # A function call is being made; gobble all the arguments
                 node = {
                     "type": ExpressionType.CALL_EXP,
-                    "arguments": self.__gobbleArguments(PreJsPy.CODE_CLOSE_PARENTHESES),
+                    "arguments": self.__gobbleArguments(
+                        "(", PreJsPy.CODE_CLOSE_PARENTHESES
+                    ),
                     "callee": node,
                 }
 
@@ -966,7 +991,7 @@ class PreJsPy(object):
         self.__gobbleSpaces()
 
         if self.__charCode() != PreJsPy.CODE_CLOSE_PARENTHESES:
-            self.__throw_error("Unclosed (")
+            self.__throw_error("Unclosed " + json.dumps("("))
 
         self.__index += 1
         return node
@@ -982,7 +1007,7 @@ class PreJsPy(object):
 
         return {
             "type": ExpressionType.ARRAY_EXP,
-            "elements": self.__gobbleArguments(PreJsPy.CODE_CLOSE_BRACKET),
+            "elements": self.__gobbleArguments("[", PreJsPy.CODE_CLOSE_BRACKET),
         }
 
     @staticmethod
@@ -1022,7 +1047,7 @@ class PreJsPy(object):
             },
             "Features": {
                 "Compound": True,
-                "Tertiary": True,
+                "Conditional": True,
                 "Identifiers": True,
                 "Calls": True,
                 "Members": {

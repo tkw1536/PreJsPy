@@ -1,8 +1,8 @@
 <?php
 
 /**
- * (c) Tom Wiesing 2016-20, licensed under MIT license
- * This code is insprired by the JavaScript version JSEP
+ * (c) Tom Wiesing 2016-23, licensed under MIT license
+ * This code is inspired by the JavaScript version JSEP
  * The original code is (c) 2013 Stephen Oney, http://jsep.from.so/ and
  * licensed under MIT
  */
@@ -227,7 +227,7 @@ class PreJsPy
             ],
             'Features' => [
                 'Compound' => $this->config['Features']['Compound'],
-                'Tertiary' => $this->config['Features']['Tertiary'],
+                'Conditional' => $this->config['Features']['Conditional'],
                 'Identifiers' => $this->config['Features']['Identifiers'],
                 'Calls' => $this->config['Features']['Calls'],
                 'Members' => self::copy($this->config['Features']['Members']),
@@ -262,8 +262,8 @@ class PreJsPy
                 if (array_key_exists('Compound', $config['Features'])) {
                     $this->config['Features']['Compound'] = $config['Features']['Compound'];
                 }
-                if (array_key_exists('Tertiary', $config['Features'])) {
-                    $this->config['Features']['Tertiary'] = $config['Features']['Tertiary'];
+                if (array_key_exists('Conditional', $config['Features'])) {
+                    $this->config['Features']['Conditional'] = $config['Features']['Conditional'];
                 }
                 if (array_key_exists('Identifiers', $config['Features'])) {
                     $this->config['Features']['Identifiers'] = $config['Features']['Identifiers'];
@@ -396,14 +396,16 @@ class PreJsPy
 
             // Try to gobble each expression individually
             $node = $this->gobbleExpression();
-            if ($node !== NULL) {
-                $nodes[] = $node;
+            if ($node === NULL) {
+                break;
             }
 
-            // didn't find an expression => something went wrong
-            else if ($this->index < $this->length) {
-                $this->throw_error('Unexpected ' . json_encode($this->char()));
-            }
+            $nodes[] = $node;
+        }
+
+        // didn't find an expression => something went wrong
+        if ($this->index < $this->length) {
+            $this->throw_error('Unexpected ' . json_encode($this->char()));
         }
 
         // If there is only one expression, return it as is
@@ -444,9 +446,9 @@ class PreJsPy
     private function gobbleExpression(): array | null
     {
 
-        // This function attempts to parse a tertiary expression or a binary expression.
-        // But if the tertiary is turned of, we can go right into binary expressions.
-        if (!$this->config['Features']['Tertiary']) {
+        // This function attempts to parse a conditional expression or a binary expression.
+        // But if the conditional is turned of, we can go right into binary expressions.
+        if (!$this->config['Features']['Conditional']) {
             return $this->gobbleBinaryExpression();
         }
 
@@ -624,7 +626,7 @@ class PreJsPy
                 $this->index += $tc_len;
                 $argument = $this->gobbleToken();
                 if ($argument === null) {
-                    $this->throw_error('Expected argument to unary expression');
+                    $this->throw_error('Expected argument for unary expression');
                 }
 
                 return [
@@ -834,9 +836,12 @@ class PreJsPy
     private function gobbleIdentifier(): array
     {
         // can't gobble an identifier if the first character isn't the start of one.
-        $ch = $this->charCode();
+        $cc = $this->charCode();
+        if ($cc === -1) {
+            $this->throw_error('Expected literal');
+        }
 
-        if (!self::isIdentifierStart($ch)) {
+        if (!self::isIdentifierStart($cc)) {
             $this->throw_error('Unexpected ' . json_encode($this->char()));
         }
 
@@ -885,31 +890,54 @@ class PreJsPy
      * @param integer $termination
      * @return array
      */
-    private function gobbleArguments(int $termination): array
+    private function gobbleArguments(string $start, int $termination): array
     {
         $args = [];
+
+        $closed = FALSE; // is the expression closed?
+        $hadComma = FALSE; // did we have a comma in the last iteration?
 
         while ($this->index < $this->length) {
             $this->gobbleSpaces();
             $ch_i = $this->charCode();
 
             if ($ch_i === $termination) {
+                $closed = TRUE;
                 $this->index += 1;
                 break;
             }
 
             // between expressions
             if ($ch_i === self::$CODE_COMMA) {
+                if ($hadComma) {
+                    $this->throw_error('Duplicate ' . json_encode(','));
+                }
+                $hadComma = TRUE;
                 $this->index += 1;
                 continue;
             }
 
+            // check that there was a comma (if we expected one)
+            $wantsComma = count($args) > 0;
+            if ($wantsComma !== $hadComma) {
+                if ($wantsComma) {
+                    $this->throw_error('Expected ' . json_encode(','));
+                } else {
+                    $this->throw_error('Unexpected ' . json_encode(','));
+                }
+            }
+
             $node = $this->gobbleExpression();
             if (($node === null) || ($node['type'] === ExpressionType::COMPOUND)) {
-                $this->throw_error('Expected comma');
+                $this->throw_error('Expected ' . json_encode(','));
             }
 
             $args[] = $node;
+            $hadComma = FALSE;
+        }
+
+        if (!$closed) {
+            $this->throw_error('Unclosed ' . json_encode($start));
         }
 
         return $args;
@@ -958,6 +986,10 @@ class PreJsPy
                     'property' => $this->gobbleIdentifier(),
                 ];
             } else if ($ch_i === self::$CODE_OPEN_BRACKET) {
+                if (!$this->config['Features']['Members']['Computed']) {
+                    $this->throw_error('Unexpected computed MemberExpression');
+                }
+
                 $prop = $this->gobbleExpression();
                 if ($prop === null) {
                     $this->throw_error('Expected expression');
@@ -986,7 +1018,7 @@ class PreJsPy
                 // A function call is being made; gobble all the arguments
                 $node = [
                     'type' => ExpressionType::CALL_EXP,
-                    'arguments' => $this->gobbleArguments(self::$CODE_CLOSE_PARENTHESES),
+                    'arguments' => $this->gobbleArguments('(', self::$CODE_CLOSE_PARENTHESES),
                     'callee' => $node,
                 ];
             }
@@ -1014,7 +1046,7 @@ class PreJsPy
 
         $this->gobbleSpaces();
         if ($this->charCode() !== self::$CODE_CLOSE_PARENTHESES) {
-            $this->throw_error('Unclosed (');
+            $this->throw_error('Unclosed ' . json_encode('('));
         }
 
         $this->index += 1;
@@ -1039,7 +1071,7 @@ class PreJsPy
 
         return [
             'type' => ExpressionType::ARRAY_EXP,
-            'elements' => $this->gobbleArguments(self::$CODE_CLOSE_BRACKET),
+            'elements' => $this->gobbleArguments('[', self::$CODE_CLOSE_BRACKET),
         ];
     }
 
@@ -1085,7 +1117,7 @@ class PreJsPy
             ],
             'Features' => [
                 'Compound' => True,
-                'Tertiary' => True,
+                'Conditional' => True,
                 'Identifiers' => True,
                 'Calls' => True,
                 'Members' => [

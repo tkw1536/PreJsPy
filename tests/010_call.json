@@ -1,0 +1,50 @@
+[
+  {
+    "config": {"Features": {"Identifiers": true, "Calls": true}},
+    "input": "f(a)",
+    "output": {"type": "CallExpression", "callee": {"type": "Identifier", "name": "f"}, "arguments": [{"type": "Identifier", "name": "a"}]},
+    "message": "Simple call expression with one argument"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Calls": true}},
+    "input": "f(a,b,c)",
+    "output": {"arguments": [{"name": "a", "type": "Identifier"}, {"name": "b", "type": "Identifier"}, {"name": "c", "type": "Identifier"}], "callee": {"name": "f", "type": "Identifier"}, "type": "CallExpression"},
+    "message": "call expression with multiple arguments"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Calls": true}},
+    "input": "f(a,b,c,)",
+    "output": {"arguments": [{"name": "a", "type": "Identifier"}, {"name": "b", "type": "Identifier"}, {"name": "c", "type": "Identifier"}], "callee": {"name": "f", "type": "Identifier"}, "type": "CallExpression"},
+    "message": "call expression with trailing comma"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Calls": true}},
+    "input": "f(a,,b,c)",
+    "error": "Index 4 of \"f(a,,b,c)\": Duplicate \",\"",
+    "message": "call expression with duplicate inner comma"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Calls": true}},
+    "input": "f(,a,b,c,)",
+    "error": "Index 3 of \"f(,a,b,c,)\": Unexpected \",\"",
+    "message": "call expression with extra leading comma"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Calls": true}},
+    "input": "f(g(a))",
+    "output": {"type": "CallExpression", "callee": {"type": "Identifier", "name": "f"}, "arguments": [{"type": "CallExpression", "callee": {"type": "Identifier", "name": "g"}, "arguments": [{"type": "Identifier", "name": "a"}]}]},
+    "message": "nested call expression"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Calls": true}},
+    "input": "f(a,f(b),c)",
+    "output": {"arguments": [{"name": "a", "type": "Identifier"}, {"arguments": [{"name": "b", "type": "Identifier"}], "callee": {"name": "f", "type": "Identifier"}, "type": "CallExpression"}, {"name": "c", "type": "Identifier"}], "callee": {"name": "f", "type": "Identifier"}, "type": "CallExpression"},
+    "message": "nested call expression with multiple arguments"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Calls": false}},
+    "input": "f(a)",
+    "error": "Index 2 of \"f(a)\": Unexpected function call",
+    "message": "call expressions disabled"
+  }
+]

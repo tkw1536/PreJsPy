@@ -1,0 +1,62 @@
+[
+  {
+    "config": {"Features": {"Literals": {"Array": true}}},
+    "input": "[]",
+    "output": {"elements": [], "type": "ArrayExpression"},
+    "message": "empty array"
+  },
+  {
+    "config": {"Features": {"Literals": {"Array": true, "Numeric": true}}},
+    "input": "[1,2,3]",
+    "output": {"elements": [{"raw": "1", "type": "Literal", "value": 1.0, "kind": "number"}, {"raw": "2", "type": "Literal", "value": 2.0, "kind": "number"}, {"raw": "3", "type": "Literal", "value": 3.0, "kind": "number"}], "type": "ArrayExpression"},
+    "message": "non-empty integer array"
+  },
+  {
+    "config": {"Features": {"Literals": {"Array": true, "Numeric": true}}},
+    "input": "[[1],[2,3],4]",
+    "output": {"elements":[{"elements":[{"kind":"number","raw":"1","type":"Literal","value":1}],"type":"ArrayExpression"},{"elements":[{"kind":"number","raw":"2","type":"Literal","value":2},{"kind":"number","raw":"3","type":"Literal","value":3}],"type":"ArrayExpression"},{"kind":"number","raw":"4","type":"Literal","value":4}],"type":"ArrayExpression"},
+    "message": "nested array"
+  },
+  {
+    "config": {"Features": {"Literals": {"Array": true, "Numeric": true}}},
+    "input": "[1,2,3,]",
+    "output": {"elements": [{"raw": "1", "type": "Literal", "value": 1.0, "kind": "number"}, {"raw": "2", "type": "Literal", "value": 2.0, "kind": "number"}, {"raw": "3", "type": "Literal", "value": 3.0, "kind": "number"}], "type": "ArrayExpression"},
+    "message": "array with trailing comma"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Literals": {"Array": true}}},
+    "input": "[a b c]",
+    "error": "Index 3 of \"[a b c]\": Expected \",\"",
+    "message": "array without commas"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Literals": {"Array": true}}},
+    "input": "[,a,b,c]",
+    "error": "Index 2 of \"[,a,b,c]\": Unexpected \",\"",
+    "message": "array with extra starting comma"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Literals": {"Array": true}}},
+    "input": "[a,,b]",
+    "error": "Index 3 of \"[a,,b]\": Duplicate \",\"",
+    "message": "array with duplicate comma"
+  },
+  {
+    "config": {"Features": {"Literals": {"Numeric": true, "Array": true}}},
+    "input": "[1,2,[1,2,3]]",
+    "output": {"elements": [{"raw": "1", "type": "Literal", "value": 1.0, "kind": "number"}, {"raw": "2", "type": "Literal", "value": 2.0, "kind": "number"}, {"elements": [{"raw": "1", "type": "Literal", "value": 1.0, "kind": "number"}, {"raw": "2", "type": "Literal", "value": 2.0, "kind": "number"}, {"raw": "3", "type": "Literal", "value": 3.0, "kind": "number"}], "type": "ArrayExpression"}], "type": "ArrayExpression"},
+    "message": "nested integer array"
+  },
+  {
+    "config": {"Features": {"Literals": {"Array": false}}},
+    "input": "[]",
+    "error": "Index 0 of \"[]\": Unexpected array literal",
+    "message": "arrays disabled"
+  },
+  {
+    "config": {"Features": {"Literals": {"Numeric": true, "Array": true}}},
+    "input": "[1",
+    "error": "Index 2 of \"[1\": Unclosed \"[\"",
+    "message": "unclosed array literal"
+  }
+]

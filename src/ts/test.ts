@@ -3,8 +3,6 @@ import path from 'path'
 import { PreJsPy } from './PreJsPy'
 import type { Expression, PartialConfig } from './PreJsPy'
 
-const BASE_PATH = path.join(__dirname, '..', '..', 'tests')
-
 interface TestCase {
   config: PartialConfig
   input: string
@@ -15,6 +13,17 @@ interface TestCase {
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 class TestPreJsPy {
+  private static readonly BASE_PATH = path.join(__dirname, '..', '..', 'tests')
+
+  /**
+   * Parses a json file from the tests directory
+   * @param filename  name of file to read
+   * @returns
+   */
+  static parseJSONFile (filename: string): any {
+    return JSON.parse(readFileSync(path.join(this.BASE_PATH, filename), 'utf8'))
+  }
+
   /**
    * Runs all test cases from a given file.
    * @param fn
@@ -23,7 +32,7 @@ class TestPreJsPy {
     process.stdout.write('Running tests from ' + fn + ' ')
 
     // read all the tests
-    const tests: TestCase[] = JSON.parse(readFileSync(path.join(BASE_PATH, fn), 'utf8'))
+    const tests: TestCase[] = this.parseJSONFile(fn)
 
     // Create a new PreJSPy instance.
     const p = new PreJsPy()
@@ -51,7 +60,7 @@ class TestPreJsPy {
   * @type message string
   */
   private static runSingleFile (instance: PreJsPy, test: TestCase): void {
-    instance.SetConfig(PreJsPy.GetDefaultConfig()) // reset the config to default
+    instance.SetConfig(this.parseJSONFile('_config.json')) // reset the config to default
     instance.SetConfig(test.config) // set config
 
     process.stdout.write('.')
@@ -109,7 +118,7 @@ console.log('Starting TypeScript tests ...')
 console.log('Node Version: ' + process.version)
 console.log('')
 
-const files: string[] = JSON.parse(readFileSync(path.join(BASE_PATH, '_manifest.json'), 'utf8'))
+const files: string[] = TestPreJsPy.parseJSONFile('_manifest.json')
 files.forEach(file => TestPreJsPy.testFile(file))
 
 console.log('')

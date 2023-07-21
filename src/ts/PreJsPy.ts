@@ -126,7 +126,7 @@ export interface Config {
 
   Features: {
     Compound: boolean
-    Tertiary: boolean
+    Conditional: boolean
     Identifiers: boolean
     Calls: boolean
     Members: {
@@ -146,7 +146,7 @@ export type PartialConfig = Partial<{
   Operators: Partial<Config['Operators']>
   Features: Partial<{
     Compound: boolean
-    Tertiary: boolean
+    Conditional: boolean
     Identifiers: boolean
     Calls: boolean
     Members: Partial<{
@@ -299,7 +299,7 @@ export class PreJsPy {
       },
       Features: {
         Compound: this.config.Features.Compound,
-        Tertiary: this.config.Features.Tertiary,
+        Conditional: this.config.Features.Conditional,
         Identifiers: this.config.Features.Identifiers,
         Calls: this.config.Features.Calls,
         Members: PreJsPy.copyDict(this.config.Features.Members),
@@ -334,8 +334,8 @@ export class PreJsPy {
         if (typeof config.Features.Compound === 'boolean') {
           this.config.Features.Compound = config.Features.Compound
         }
-        if (typeof config.Features.Tertiary === 'boolean') {
-          this.config.Features.Tertiary = config.Features.Tertiary
+        if (typeof config.Features.Conditional === 'boolean') {
+          this.config.Features.Conditional = config.Features.Conditional
         }
         if (typeof config.Features.Identifiers === 'boolean') {
           this.config.Features.Identifiers = config.Features.Identifiers
@@ -403,11 +403,17 @@ export class PreJsPy {
 
   /** returns the current character inside the input string */
   private char (): string {
+    if (this.index >= this.length) {
+      return ''
+    }
     return this.expr.charAt(this.index)
   }
 
   /** returns the current character code inside the input string */
   private charCode (): number {
+    if (this.index >= this.length) {
+      return -1
+    }
     return this.expr.charCodeAt(this.index)
   }
 
@@ -449,8 +455,6 @@ export class PreJsPy {
      * Gobbles a single or compound expression from the input.
      */
   private gobbleCompound (): Expression {
-    // TODO: Disable compound expressions
-
     const nodes: Expression[] = []
 
     while (this.index < this.length) {
@@ -465,16 +469,17 @@ export class PreJsPy {
 
       // Try to gobble each expression individually
       const node = this.gobbleExpression()
-      if (node !== null) {
-        nodes.push(node)
-        continue
+      if (node === null) {
+        break
       }
 
-      if (this.index < this.length) {
-        // If we weren't able to find a binary expression and are out of room, then
-        // the expression passed in probably has too much
-        this.throwError('Unexpected ' + JSON.stringify(this.char()))
-      }
+      nodes.push(node)
+    }
+
+    if (this.index < this.length) {
+      // If we weren't able to find a binary expression and are out of room, then
+      // the expression passed in probably has too much
+      this.throwError('Unexpected ' + JSON.stringify(this.char()))
     }
 
     // If there's only one expression just try returning the expression
@@ -509,24 +514,24 @@ export class PreJsPy {
   /**
      * The main parsing function to pick an expression.
      *
-     * This code first attempts to check if a tertiary expression is provided and, if not the case, delegates to a binary expression.
+     * This code first attempts to check if a conditional expression is provided and, if not the case, delegates to a binary expression.
      * @returns
      */
   private gobbleExpression (): Expression | null {
-    // if we don't have the tertiary enabled, gobble a binary expression
+    // if we don't have the conditional enabled, gobble a binary expression
     const test = this.gobbleBinaryExpression()
-    if (!this.config.Features.Tertiary) {
+    if (!this.config.Features.Conditional) {
       return test
     }
 
     this.gobbleSpaces()
 
-    // didn't actually get a ternary expression
+    // didn't actually get a conditional expression
     if (test === null || this.charCode() !== CODE_QUESTIONMARK) {
       return test
     }
 
-    // Ternary expression: test ? consequent : alternate
+    // Conditional expression: test ? consequent : alternate
 
     this.index++
 
@@ -681,7 +686,7 @@ export class PreJsPy {
 
         const argument = this.gobbleToken()
         if (argument === null) {
-          this.throwError('Expected expression')
+          this.throwError('Expected argument for unary expression')
         }
 
         return {
@@ -892,6 +897,10 @@ export class PreJsPy {
   private gobbleIdentifier (): Literal | Identifier {
     const start = this.index
 
+    const cc = this.charCode()
+    if (cc === -1) {
+      this.throwError('Expected literal')
+    }
     if (!PreJsPy.isIdentifierStart(this.charCode())) {
       this.throwError('Unexpected ' + JSON.stringify(this.char()))
     }
@@ -931,26 +940,50 @@ export class PreJsPy {
      *
      * e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
      */
-  private gobbleArguments (termination: number): Expression[] {
+  private gobbleArguments (start: string, termination: number): Expression[] {
     const args: Expression[] = []
+
+    let closed = false // is the expression closed?
+    let hadComma = false // did we have a comma in the last iteration?
+
     while (this.index < this.length) {
       this.gobbleSpaces()
       const cc = this.charCode()
       if (cc === termination) { // done parsing
+        closed = true
         this.index++
         break
       }
 
       if (cc === CODE_COMMA) { // between expressions
+        if (hadComma) {
+          this.throwError('Duplicate ' + JSON.stringify(','))
+        }
+        hadComma = true
         this.index++
         continue
       }
 
+      // check that there was a comma (if we expected one)
+      const wantsComma = args.length > 0
+      if (wantsComma !== hadComma) {
+        if (wantsComma) {
+          this.throwError('Expected ' + JSON.stringify(','))
+        } else {
+          this.throwError('Unexpected ' + JSON.stringify(','))
+        }
+      }
+
       const node = this.gobbleExpression()
       if (node === null || node.type === ExpressionType.COMPOUND) {
-        this.throwError('Expected comma')
+        this.throwError('Expected ' + JSON.stringify(','))
       }
+
       args.push(node)
+      hadComma = false
+    }
+    if (!closed) {
+      this.throwError('Unclosed ' + JSON.stringify(start))
     }
     return args
   }
@@ -1015,7 +1048,7 @@ export class PreJsPy {
         // A function call is being made; gobble all the arguments
         node = {
           type: ExpressionType.CALL_EXP,
-          arguments: this.gobbleArguments(CODE_CLOSE_PARENTHESES),
+          arguments: this.gobbleArguments('(', CODE_CLOSE_PARENTHESES),
           callee: node
         }
       }
@@ -1061,7 +1094,7 @@ export class PreJsPy {
 
     return {
       type: ExpressionType.ARRAY_EXP,
-      elements: this.gobbleArguments(CODE_CLOSE_BRACKET)
+      elements: this.gobbleArguments('[', CODE_CLOSE_BRACKET)
     }
   }
 
@@ -1104,7 +1137,7 @@ export class PreJsPy {
 
       Features: {
         Compound: true,
-        Tertiary: true,
+        Conditional: true,
         Identifiers: true,
         Calls: true,
         Members: {

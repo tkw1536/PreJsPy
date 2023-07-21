@@ -1,0 +1,38 @@
+[
+    {
+      "config": {"Operators": {"Unary": ["@"]}, "Features": {"Identifiers": true}},
+      "input": "@ a",
+      "output": {"argument": {"name": "a", "type": "Identifier"}, "operator": "@", "type": "UnaryExpression"},
+      "message": "single character unary"
+    },
+    {
+        "config": {"Operators": {"Unary": ["@"]}},
+        "input": "@",
+        "error": "Index 1 of \"@\": Expected argument for unary expression",
+        "message": "unary operator without argument"
+    },
+    {
+        "config": {"Operators": {"Unary": ["@"]}, "Features": {"Identifiers": true}},
+        "input": "@a",
+        "output": {"argument": {"name": "a", "type": "Identifier"}, "operator": "@", "type": "UnaryExpression"},
+        "message": "tight unary"
+    },
+    {
+        "config": {"Operators": {"Unary": ["@@", "@"]}, "Features": {"Identifiers": true}},
+        "input": "@@a",
+        "output": {"argument": {"name": "a", "type": "Identifier"}, "operator": "@@", "type": "UnaryExpression"},
+        "message": "conflicting unary"
+    },
+    {
+        "config": {"Operators": {"Unary": ["@@", "@"]}, "Features": {"Identifiers": true}},
+        "input": "@@@a",
+        "output": {"argument": {"argument": {"name": "a", "type": "Identifier"}, "operator": "@", "type": "UnaryExpression"}, "operator": "@@", "type": "UnaryExpression"},
+        "message": "repeated unary"
+    },
+    {
+        "config": {"Operators": {"Unary": ["@@", "@"]}, "Features": {"Identifiers": true}},
+        "input": "@(@@a)",
+        "output": {"argument": {"argument": {"name": "a", "type": "Identifier"}, "operator": "@@", "type": "UnaryExpression"}, "operator": "@", "type": "UnaryExpression"},
+        "message": "repeated unary with brackets"
+    }
+  ]

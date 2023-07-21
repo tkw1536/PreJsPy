@@ -1,13 +1,14 @@
 [
-    "array_literals.json",
-    "number_literals.json",
-    "identifier_symbolic.json",
-    "constant_symbolic.json",
-    "unary_ops.json",
-    "precedence.json",
-    "string_literals.json",
-    "call.json",
-    "compound.json",
-    "binary_ops.json"
+    "001_compound.json",
+    "002_conditional.json",
+    "003_binary.json",
+    "004_number.json",
+    "005_string.json",
+    "006_array.json",
+    "007_unary.json",
+    "008_identifier.json",
+    "009_member.json",
+    "010_call.json",
+    "011_precedence.json"
 ]
 

@@ -1,0 +1,50 @@
+[
+    {
+      "config": {"Features": {"Literals": {"String": true}}},
+      "input": "\"\"",
+      "output": {"raw": "\"\"", "value": "", "type": "Literal", "kind":"string"},
+      "message": "empty double quotes literal"
+    },
+    {
+      "config": {"Features": {"Literals": {"String": true}}},
+      "input": "\"Hello world\"",
+      "output": {"raw": "\"Hello world\"", "value": "Hello world", "type": "Literal", "kind":"string"},
+      "message": "non-empty double quotes literal"
+    },
+    {
+        "config": {"Features": {"Literals": {"String": false}}},
+        "input": "\"Hello world\"",
+        "error": "Index 0 of \"\\\"Hello world\\\"\": Unexpected string literal",
+        "message": "string literal not enabled"
+    },
+    {
+      "config": {"Features": {"Literals": {"String": true}}},
+      "input": "\"\\n\\t\\r\\\"\\'\"",
+      "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "\"\\n\\t\\r\\\"\\'\"", "kind":"string"},
+      "message": "escaped double quotes literal"
+    },
+    {
+      "config": {"Features": {"Literals": {"String": true}}},
+      "input": "''",
+      "output": {"value": "", "type": "Literal", "raw": "''", "kind":"string"},
+      "message": "empty single quotes literal"
+    },
+    {
+      "config": {"Features": {"Literals": {"String": true}}},
+      "input": "'Hello world'",
+      "output": {"value": "Hello world", "type": "Literal", "raw": "'Hello world'", "kind":"string"},
+      "message": "non-empty single quotes literal"
+    },
+    {
+      "config": {"Features": {"Literals": {"String": true}}},
+      "input": "'\\n\\t\\r\\\"\\''",
+      "output": {"value": "\n\t\r\"'", "type": "Literal", "raw": "'\\n\\t\\r\\\"\\''", "kind":"string"},
+      "message": "escaped single quotes literal"
+    },
+    {
+      "config": {"Features": {"Literals": {"String": true}}},
+      "input": "\"Unclosed",
+      "error": "Index 9 of \"\\\"Unclosed\": Unclosed quote after \"Unclosed\"",
+      "message": "unclosed string"
+    }
+  ]

@@ -1,0 +1,44 @@
+[
+  {
+    "config": {"Features": {"Identifiers": true, "Compound": true}},
+    "input": "a b",
+    "output": {"body": [{"type": "Identifier", "name": "a"}, {"type": "Identifier", "name": "b"}], "type": "Compound"},
+    "message": "two-item compound parse"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Compound": true}},
+    "input": "a b c",
+    "output": {"body": [{"type": "Identifier", "name": "a"}, {"type": "Identifier", "name": "b"}, {"type": "Identifier", "name": "c"}], "type": "Compound"},
+    "message": "three-item compound parse"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Literals": {"String": true}, "Compound": true}},
+    "input": "''a",
+    "output": {"body":[{"kind":"string","raw":"''","type":"Literal","value":""},{"name":"a","type":"Identifier"}],"type":"Compound"},
+    "message": "compound without spacing"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Compound": false}},
+    "input": "a b",
+    "error": "Index 3 of \"a b\": Unexpected compound expression",
+    "message": "multi parsing fails when compound is disabled"
+  },
+  {
+    "config": {"Features": {"Identifiers": true, "Compound": false}},
+    "input": "a",
+    "output": {"name":"a","type":"Identifier"},
+    "message": "single parsing succeeds when compound is disabled"
+  },
+  {
+    "config": {"Features": {"Compound": true}},
+    "input": "",
+    "output": {"body": [], "type": "Compound"},
+    "message": "parsing an empty compound expression"
+  },
+  {
+    "config": {"Features": {"Compound": false}},
+    "input": "",
+    "error": "Index 0 of \"\": Unexpected compound expression",
+    "message": "fail parsing an empty compound expression"
+  }
+]

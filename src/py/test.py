@@ -5,6 +5,7 @@ import json
 import os.path
 
 from typing import TYPE_CHECKING
+from typing import Any
 
 if TYPE_CHECKING:
     from typing import TypedDict, Optional
@@ -17,12 +18,16 @@ if TYPE_CHECKING:
         message: str
 
 
-BASE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "tests")
-
-
 class TestPreJsPy(object):
+    __BASE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "tests")
+
     @classmethod
-    def test_file(cls, fn):
+    def read_json_file(cls, filename: str) -> Any:
+        with open(os.path.join(cls.__BASE_PATH, filename), "r") as f:
+            return json.load(f)
+
+    @classmethod
+    def test_file(cls, fn: str):
         """
         Runs all tests stored in a given JSON file.
 
@@ -32,8 +37,7 @@ class TestPreJsPy(object):
         print("Running tests from {} ".format(fn), end="")
 
         # Read the test case file
-        with open(os.path.join(BASE_PATH, fn), "r") as f:
-            tests = json.load(f)
+        tests = cls.read_json_file(fn)
 
         # Create a new PreJSPy() instance.
         p = PreJsPy.PreJsPy()
@@ -50,7 +54,7 @@ class TestPreJsPy(object):
         :param instance: PreJsPy instance to test on.
         """
 
-        instance.SetConfig(PreJsPy.PreJsPy.GetDefaultConfig())
+        instance.SetConfig(cls.read_json_file("_config.json"))
         instance.SetConfig(test["config"])
 
         print(".", end="")
@@ -116,9 +120,7 @@ print("Starting Python tests ...")
 print("Python Info: {}".format(sys.implementation))
 print("")
 
-with open(os.path.join(BASE_PATH, "_manifest.json"), "r") as f:
-    files = json.load(f)
-
+files = TestPreJsPy.read_json_file("_manifest.json")
 for file in files:
     TestPreJsPy.test_file(file)
 
