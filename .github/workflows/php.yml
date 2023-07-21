@@ -28,12 +28,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Use Python
-      uses: actions/setup-python@v4
+    - name: Use PHP 8.1
+      uses: shivammathur/setup-php@v2
       with:
-        python-version: 3.11
-        architecture: x64
+        php-version: 8.1
+        tools: none
     - name: Install dependencies
-      run: make pydeps
-    - name: Check & Lint Python
-      run: make pycheck
+      run: make phpdeps
+    - name: Check & Lint PHP
+      run: make phpcheck
