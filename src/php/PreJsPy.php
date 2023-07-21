@@ -717,9 +717,6 @@ class PreJsPy
         if (self::isIdentifierStart($chCode)) {
             $this->throw_error('Variable names cannot start with a number like ' . json_encode($number . $this->char()));
         }
-        if ($chCode === self::$CODE_PERIOD) {
-            $this->throw_error('Unexpected period');
-        }
         if (!$this->config['Features']['Literals']['Numeric']) {
             $this->index = $start;
             $this->throw_error('Unexpected numeric literal');

@@ -101,11 +101,5 @@
     "input": "0abc",
     "error": "Index 1 of \"0abc\": Variable names cannot start with a number like \"0a\"",
     "message": "single-digit floating point with negative exponential and minus sign"
-  },
-  {
-    "config": {"Features": {"Literals": {"Numeric": true, "NumericSeparator": ""}}},
-    "input": "1.2.3",
-    "error": "Index 3 of \"1.2.3\": Unexpected period",
-    "message": "single-digit floating point with negative exponential and minus sign"
   }
 ]

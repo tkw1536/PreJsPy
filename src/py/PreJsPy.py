@@ -724,8 +724,6 @@ class PreJsPy(object):
                 "Variable names cannot start with a number like "
                 + json.dumps(number + self.__char()),
             )
-        if chCode == PreJsPy.CODE_PERIOD:
-            self.__throw_error("Unexpected period")
 
         if not self.__config["Features"]["Literals"]["Numeric"]:
             self.__index = start

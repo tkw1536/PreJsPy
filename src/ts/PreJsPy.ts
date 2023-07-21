@@ -772,11 +772,6 @@ export class PreJsPy {
       this.throwError('Variable names cannot start with a number like ' + JSON.stringify(number + this.char()))
     }
 
-    // can't contain another period.
-    if (chCode === CODE_PERIOD) {
-      this.throwError('Unexpected period')
-    }
-
     if (!this.config.Features.Literals.Numeric) {
       this.index -= number.length
       this.throwError('Unexpected numeric literal')
