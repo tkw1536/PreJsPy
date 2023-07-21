@@ -978,16 +978,16 @@ export class PreJsPy {
     if (node === null) {
       return null
     }
-    this.gobbleSpaces()
 
-    // then iterate accessor calls
-    let cc = this.charCode()
-    while (cc === CODE_PERIOD || cc === CODE_OPEN_BRACKET || cc === CODE_OPEN_PARENTHESES) {
+    // then iterate over operations applied to it
+    while (true) {
+      this.gobbleSpaces()
+      const cc = this.charCode()
+
       this.index++
-      if (cc === CODE_PERIOD) {
-        if (!this.config.Features.Members.Static) {
-          this.throwError('Unexpected static MemberExpression')
-        }
+
+      // access via .
+      if (this.config.Features.Members.Static && cc === CODE_PERIOD) {
         this.gobbleSpaces()
         node = {
           type: ExpressionType.MEMBER_EXP,
@@ -995,10 +995,11 @@ export class PreJsPy {
           object: node,
           property: this.gobbleIdentifier()
         }
-      } else if (cc === CODE_OPEN_BRACKET) {
-        if (!this.config.Features.Members.Computed) {
-          this.throwError('Unexpected computed MemberExpression')
-        }
+        continue
+      }
+
+      // access via []s
+      if (this.config.Features.Members.Computed && cc === CODE_OPEN_BRACKET) {
         const property = this.gobbleExpression()
         if (property === null) {
           this.throwError('Expected Expression')
@@ -1012,26 +1013,27 @@ export class PreJsPy {
         }
 
         this.gobbleSpaces()
-        cc = this.charCode()
+        const cc = this.charCode()
         if (cc !== CODE_CLOSE_BRACKET) {
           this.throwError('Unclosed ' + JSON.stringify('['))
         }
         this.index++
-      } else if (cc === CODE_OPEN_PARENTHESES) {
-        if (!this.config.Features.Calls) {
-          this.throwError('Unexpected function call')
-        }
+        continue
+      }
 
-        // A function call is being made; gobble all the arguments
+      // call with ()s
+      if (this.config.Features.Calls && cc === CODE_OPEN_PARENTHESES) {
         node = {
           type: ExpressionType.CALL_EXP,
           arguments: this.gobbleArguments('(', CODE_CLOSE_PARENTHESES),
           callee: node
         }
+        continue
       }
 
-      this.gobbleSpaces()
-      cc = this.charCode()
+      // done
+      this.index -= 1
+      break
     }
     return node
   }

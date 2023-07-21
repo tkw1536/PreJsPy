@@ -14,7 +14,7 @@
   {
     "config": {"Features": {"Identifiers": true, "Members": {"Static": false}}},
     "input": "hello.world",
-    "error": "Index 6 of \"hello.world\": Unexpected static MemberExpression",
+    "error": "Index 5 of \"hello.world\": Unexpected \".\"",
     "message": "no static member access"
   },
   {
@@ -32,7 +32,7 @@
   {
     "config": {"Features": {"Identifiers": true, "Literals": {"String": true}, "Members": {"Computed": false}}},
     "input": "hello[\"world\"]",
-    "error": "Index 6 of \"hello[\\\"world\\\"]\": Unexpected computed MemberExpression",
+    "error": "Index 5 of \"hello[\\\"world\\\"]\": Unexpected \"[\"",
     "message": "computed member access not enabled"
   },
   {

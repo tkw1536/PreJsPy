@@ -44,7 +44,7 @@
   {
     "config": {"Features": {"Identifiers": true, "Calls": false}},
     "input": "f(a)",
-    "error": "Index 2 of \"f(a)\": Unexpected function call",
+    "error": "Index 4 of \"f(a)\": Unexpected compound expression",
     "message": "call expressions disabled"
   }
 ]

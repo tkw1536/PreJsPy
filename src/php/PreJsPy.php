@@ -934,30 +934,26 @@ class PreJsPy
      */
     private function gobbleVariable(): array|null
     {
-        $ch_i = $this->charCode();
-
-        if ($ch_i === self::$CODE_OPEN_PARENTHESES) {
+        // parse a group or identifier first
+        $cc = $this->charCode();
+        if ($cc === self::$CODE_OPEN_PARENTHESES) {
             $node = $this->gobbleGroup();
         } else {
             $node = $this->gobbleIdentifier();
         }
+        if ($node === NULL) {
+            return null;
+        }
 
-        $this->gobbleSpaces();
+        // then iterate over operations applied to it
+        while (true) {
+            $this->gobbleSpaces();
+            $cc = $this->charCode();
 
-        $ch_i = $this->charCode();
-
-        while (
-            $ch_i === self::$CODE_PERIOD
-            || $ch_i === self::$CODE_OPEN_BRACKET
-            || $ch_i === self::$CODE_OPEN_PARENTHESES
-        ) {
             $this->index += 1;
 
-            if ($ch_i === self::$CODE_PERIOD) {
-                if (!$this->config['Features']['Members']['Static']) {
-                    $this->throw_error('Unexpected static MemberExpression');
-                }
-
+            // access via .
+            if ($this->config['Features']['Members']['Static'] && $cc === self::$CODE_PERIOD) {
                 $this->gobbleSpaces();
 
                 $node = [
@@ -966,11 +962,12 @@ class PreJsPy
                     'object' => $node,
                     'property' => $this->gobbleIdentifier(),
                 ];
-            } else if ($ch_i === self::$CODE_OPEN_BRACKET) {
-                if (!$this->config['Features']['Members']['Computed']) {
-                    $this->throw_error('Unexpected computed MemberExpression');
-                }
 
+                continue;
+            } 
+            
+            // access via []s
+            if ($this->config['Features']['Members']['Computed'] && $cc === self::$CODE_OPEN_BRACKET) {
                 $prop = $this->gobbleExpression();
                 if ($prop === null) {
                     $this->throw_error('Expected expression');
@@ -991,21 +988,23 @@ class PreJsPy
                 }
 
                 $this->index += 1;
-            } else if ($ch_i === self::$CODE_OPEN_PARENTHESES) {
-                if (!$this->config['Features']['Calls']) {
-                    $this->throw_error('Unexpected function call');
-                }
 
-                // A function call is being made; gobble all the arguments
+                continue;
+            }
+            
+            // call via ()s
+            if ($this->config['Features']['Calls'] && $cc === self::$CODE_OPEN_PARENTHESES) {
                 $node = [
                     'type' => ExpressionType::CALL_EXP,
                     'arguments' => $this->gobbleArguments('(', self::$CODE_CLOSE_PARENTHESES),
                     'callee' => $node,
                 ];
+                continue;
             }
-
-            $this->gobbleSpaces();
-            $ch_i = $this->charCode();
+            
+            // Done
+            $this->index -= 1;
+            break;
         }
 
         return $node;

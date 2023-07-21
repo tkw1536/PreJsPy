@@ -484,7 +484,7 @@ class PreJsPy(object):
 
         # didn't find an expression => something went wrong
         if self.__index < self.__length:
-            self.__throw_error('Unexpected ' + json.dumps(self.__char()))
+            self.__throw_error("Unexpected " + json.dumps(self.__char()))
 
         # If there is only one expression, return it as is
         if len(nodes) == 1:
@@ -897,9 +897,9 @@ class PreJsPy(object):
     # It also gobbles function calls:
     # e.g. `Math.acos(obj.angle)`
     def __gobbleVariable(self) -> Optional["Expression"]:
-        ch_i = self.__charCode()
-
-        if ch_i == PreJsPy.CODE_OPEN_PARENTHESES:
+        # parse a group or identifier first
+        cc = self.__charCode()
+        if cc == PreJsPy.CODE_OPEN_PARENTHESES:
             node = self.__gobbleGroup()
         else:
             node = self.__gobbleIdentifier()
@@ -907,21 +907,18 @@ class PreJsPy(object):
         if node is None:
             return None
 
-        self.__gobbleSpaces()
+        # then iterate over operations applied to it
+        while True:
+            self.__gobbleSpaces()
+            cc = self.__charCode()
 
-        ch_i = self.__charCode()
-
-        while (
-            ch_i == PreJsPy.CODE_PERIOD
-            or ch_i == PreJsPy.CODE_OPEN_BRACKET
-            or ch_i == PreJsPy.CODE_OPEN_PARENTHESES
-        ):
             self.__index += 1
 
-            if ch_i == PreJsPy.CODE_PERIOD:
-                if not self.__config["Features"]["Members"]["Static"]:
-                    self.__throw_error("Unexpected static MemberExpression")
-
+            # access via .
+            if (
+                self.__config["Features"]["Members"]["Static"]
+                and cc == PreJsPy.CODE_PERIOD
+            ):
                 self.__gobbleSpaces()
 
                 node = {
@@ -930,10 +927,13 @@ class PreJsPy(object):
                     "object": node,
                     "property": self.__gobbleIdentifier(),
                 }
-            elif ch_i == PreJsPy.CODE_OPEN_BRACKET:
-                if not self.__config["Features"]["Members"]["Computed"]:
-                    self.__throw_error("Unexpected computed MemberExpression")
+                continue
 
+            # access via []s
+            if (
+                self.__config["Features"]["Members"]["Computed"]
+                and cc == PreJsPy.CODE_OPEN_BRACKET
+            ):
                 prop = self.__gobbleExpression()
                 if prop is None:
                     self.__throw_error("Expected expression")
@@ -947,16 +947,19 @@ class PreJsPy(object):
 
                 self.__gobbleSpaces()
 
-                ch_i = self.__charCode()
-
-                if ch_i != PreJsPy.CODE_CLOSE_BRACKET:
+                cc = self.__charCode()
+                if cc != PreJsPy.CODE_CLOSE_BRACKET:
                     self.__throw_error("Unclosed " + json.dumps("["))
 
                 self.__index += 1
-            elif ch_i == PreJsPy.CODE_OPEN_PARENTHESES:
-                if not self.__config["Features"]["Calls"]:
-                    self.__throw_error("Unexpected function call")
-                # A function call is being made; gobble all the arguments
+
+                continue
+
+            # call with ()s
+            if (
+                self.__config["Features"]["Calls"]
+                and cc == PreJsPy.CODE_OPEN_PARENTHESES
+            ):
                 node = {
                     "type": ExpressionType.CALL_EXP,
                     "arguments": self.__gobbleArguments(
@@ -964,9 +967,11 @@ class PreJsPy(object):
                     ),
                     "callee": node,
                 }
+                continue
 
-            self.__gobbleSpaces()
-            ch_i = self.__charCode()
+            # done
+            self.__index -= 1
+            break
 
         return node
 
