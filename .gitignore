@@ -141,3 +141,8 @@ jspm_packages
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Ignore cache files
+vendor
+!composer.lock
+*.cache

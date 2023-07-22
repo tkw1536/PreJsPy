@@ -28,5 +28,8 @@ tsformat:
 php:
 	cd src/php && php test.php
 phpdeps:
+	cd src/php && composer install
 phpcheck:
+	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --format=txt --dry-run --diff
 phpformat:
+	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes

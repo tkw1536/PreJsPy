@@ -7,30 +7,30 @@ include 'PreJsPy.php';
 class TestPreJsPy
 {
     private static string $BASE_PATH;
+
     public static function init()
     {
-        self::$BASE_PATH = join('/', [dirname(__FILE__), '..', '..', 'tests']);
+        self::$BASE_PATH = implode('/', [__DIR__, '..', '..', 'tests']);
     }
 
     /**
-     * Parses a json file from the tests directory
+     * Parses a json file from the tests directory.
      *
      * @param string $filename name of file to read
-     * @return mixed
      */
-    public static function parseJSONFile(string $filename): mixed {
-        return json_decode(file_get_contents(self::$BASE_PATH . '/' . $filename), true);
+    public static function parseJSONFile(string $filename): mixed
+    {
+        return json_decode(file_get_contents(self::$BASE_PATH.'/'.$filename), true);
     }
 
     /**
-     * Runs all tests stored in a given json file
+     * Runs all tests stored in a given json file.
      *
      * @param string $fn filename to load
-     * @return void
      */
     public static function testFile(string $fn): void
     {
-        echo 'Running tests from ' . $fn . ' ';
+        echo 'Running tests from '.$fn.' ';
 
         // Read the test case file
         $tests = self::parseJSONFile($fn);
@@ -52,36 +52,33 @@ class TestPreJsPy
 
         echo '.';
 
-        # figure out what we are expecting
+        // figure out what we are expecting
         $wantErrorStr = self::jsonSerialize(array_key_exists('error', $test) ? $test['error'] : null);
         $wantResult = array_key_exists('output', $test) ? $test['output'] : null;
         $wantResultStr = self::jsonSerialize($wantResult);
 
-        # run the code and figure out what we got
+        // run the code and figure out what we got
         [$gotResult, $gotError] = $instance->TryParse($test['input']);
         $gotResultStr = self::jsonSerialize($gotResult);
-        $gotErrorStr = self::jsonSerialize(($gotError !== null) ? $gotError->getMessage() : null);
+        $gotErrorStr = self::jsonSerialize((null !== $gotError) ? $gotError->getMessage() : null);
 
         if ($gotErrorStr !== $wantErrorStr) {
             echo "!\nFailed\n";
-            echo 'Failed testcase ' . $test['message'] . ":\nGot Error:  ". $gotErrorStr . "\nWant Error: " . $wantErrorStr . "\n";
+            echo 'Failed testcase '.$test['message'].":\nGot Error:  ".$gotErrorStr."\nWant Error: ".$wantErrorStr."\n";
 
-            die();
+            exit;
         }
 
-        if ($gotResultStr != $wantResultStr) {
+        if ($gotResultStr !== $wantResultStr) {
             echo "!\nFailed\n";
-            echo 'Failed testcase ' . $test['message'] . ":\nGot Result:  ". $gotResultStr . "\nWant Result: " . $wantResultStr . "\n";
+            echo 'Failed testcase '.$test['message'].":\nGot Result:  ".$gotResultStr."\nWant Result: ".$wantResultStr."\n";
 
-            die();
+            exit;
         }
     }
 
     /**
-     * Calls json_encode on the normalized value
-     *
-     * @param mixed $value
-     * @return string
+     * Calls json_encode on the normalized value.
      */
     private static function jsonSerialize(mixed $value): string
     {
@@ -92,9 +89,6 @@ class TestPreJsPy
      * Return a normalized copy of value.
      *
      * Sorts all arrays according to their keys, even recursively.
-     *
-     * @param mixed $value
-     * @return mixed
      */
     private static function valueNormalize(mixed $value): mixed
     {
@@ -107,13 +101,14 @@ class TestPreJsPy
             return self::valueNormalize($value);
         }, $value);
         ksort($value);
+
         return $value;
     }
 }
 TestPreJsPy::init();
 
 echo "Starting php tests ...\n";
-echo 'PHP Version: ' . phpversion() . "\n";
+echo 'PHP Version: '.\PHP_VERSION."\n";
 echo "\n";
 
 /** @var string[] */
