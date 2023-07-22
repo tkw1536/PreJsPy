@@ -276,19 +276,6 @@ class PreJsPy
         $this->SetConfig($this->config);
     }
 
-    // ============
-    // MISC HELPERS
-    // ============
-
-    private function binaryPrecedence(string $op_val): int
-    {
-        if (!array_key_exists($op_val, $this->config['Operators']['Binary'])) {
-            return 0;
-        }
-
-        return $this->config['Operators']['Binary'][$op_val];
-    }
-
     // =======
     // PARSING
     // =======
@@ -504,7 +491,7 @@ class PreJsPy
                 break;
             }
 
-            $precedence = $this->binaryPrecedence($value);
+            $precedence = $this->config['Operators']['Binary'][$value];
             if (0 === $precedence) {
                 break;
             }

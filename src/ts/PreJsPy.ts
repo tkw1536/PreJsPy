@@ -383,19 +383,6 @@ export class PreJsPy {
     this.SetConfig(this.config)
   }
 
-  // ============
-  // MISC HELPERS
-  // ============
-
-  /**
-     * Returns the precedence of a binary operator or `0` if it isn't a binary operator.
-     * @param operator Value of operator to lookup
-     */
-  private binaryPrecedence (operator: string): number {
-    const binary = this.config.Operators.Binary
-    return binary[operator] ?? 0
-  };
-
   // =======
   // Parsing
   // =======
@@ -609,15 +596,12 @@ export class PreJsPy {
 
     // Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
     while (true) {
-      const binaryOperator = this.gobbleBinaryOp()
-      if (binaryOperator === null) {
+      const value = this.gobbleBinaryOp()
+      if (value === null) {
         break
       }
 
-      const precedence = this.binaryPrecedence(binaryOperator)
-      if (precedence === 0) {
-        break
-      }
+      const precedence = this.config.Operators.Binary[value]
 
       while ((ops.length > 0) && (precedence < ops[ops.length - 1].precedence)) {
         const right = exprs.pop()
@@ -640,11 +624,11 @@ export class PreJsPy {
 
       const node = this.gobbleToken()
       if (node === null) {
-        this.throwError('Expected expression after ' + JSON.stringify(binaryOperator))
+        this.throwError('Expected expression after ' + JSON.stringify(value))
       }
       exprs.push(node)
 
-      ops.push({ value: binaryOperator, precedence })
+      ops.push({ value, precedence })
     }
 
     let i = exprs.length - 1

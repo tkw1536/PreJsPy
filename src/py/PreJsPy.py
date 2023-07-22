@@ -400,21 +400,6 @@ class PreJsPy(object):
         self.__config = self.__class__.GetDefaultConfig()
         self.SetConfig(cast("PartialConfig", self.__config))
 
-    # ============
-    # MISC HELPERS
-    # ============
-
-    def __binaryPrecedence(self, op_val: str) -> int:
-        """
-        Returns the precedence of a binary operator or `0` if it isn't a binary operator.
-        :param op_val: Value of operator to lookup.
-        """
-
-        if op_val not in self.__config["Operators"]["Binary"]:
-            return 0
-
-        return self.__config["Operators"]["Binary"][op_val]
-
     # =======
     # PARSING
     # =======
@@ -579,9 +564,7 @@ class PreJsPy(object):
             if value is None:
                 break
 
-            precedence = self.__binaryPrecedence(value)
-            if precedence == 0:
-                break
+            precedence = self.__config["Operators"]["Binary"][value]
 
             # Reduce: make a binary expression from the three topmost entries.
             while (len(ops) > 0) and precedence < ops[-1]["precedence"]:
