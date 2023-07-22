@@ -309,11 +309,32 @@ class PreJsPy
     private string $expr = '';
 
     /**
-     * @return string the current character or "" if the end of the string was reached
+     * Returns the current character or "" if the end of the string was reached
+     * 
+     * @return string 
      */
     private function char(): string
     {
         return mb_substr($this->expr, $this->index, 1, 'UTF-8');
+    }
+
+    /**
+     * Returns $count characters of the input string, starting at the current character. 
+     *
+     * @return string
+     */
+    private function chars(int $count): string {
+        return mb_substr($this->expr, $this->index, $count, 'UTF-8');
+    }
+    
+    /**
+     * Returns the string of characters starting at $start up to (but not including) the current character.
+     *
+     * @param integer $start
+     * @return string
+     */
+    private function charsFrom(int $start): string {
+        return mb_substr($this->expr, $start, $this->index - $start, 'UTF-8');
     }
 
     /**
@@ -469,16 +490,14 @@ class PreJsPy
     {
         $this->skipSpaces();
 
-        $to_check = mb_substr($this->expr, $this->index, $this->binaryOperatorLength, 'UTF-8');
-        $tc_len = mb_strlen($to_check, 'UTF-8');
-
+        $tc_len = $this->binaryOperatorLength;
         while ($tc_len > 0) {
+            $to_check = $this->chars($tc_len);
             if (array_key_exists($to_check, $this->config['Operators']['Binary'])) {
                 $this->index += $tc_len;
                 return $to_check;
             }
             $tc_len--;
-            $to_check = mb_substr($to_check, 0, $tc_len, 'UTF-8');
         }
 
         return null;
@@ -579,9 +598,9 @@ class PreJsPy
             return $this->gobbleArray();
         }
 
-        $to_check = mb_substr($this->expr, $this->index, $this->unaryOperatorLength, 'UTF-8');
-        $tc_len = mb_strlen($to_check, 'UTF-8');
+        $tc_len = $this->unaryOperatorLength;
         while ($tc_len > 0) {
+            $to_check = $this->chars($tc_len);
             if (in_array($to_check, $this->config['Operators']['Unary'])) {
                 $this->index += $tc_len;
                 $argument = $this->gobbleToken();
@@ -597,7 +616,6 @@ class PreJsPy
             }
 
             $tc_len--;
-            $to_check = mb_substr($to_check, 0, $tc_len, 'UTF-8');
         }
 
         if (self::isIdentifierStart($ch) || $ch === self::CHAR_OPEN_PARENTHESES) {
@@ -619,12 +637,10 @@ class PreJsPy
         $separator = $this->config['Features']['Literals']['NumericSeparator'];
         if ($separator === '') {
             $start = $this->index;
-            $count = 0;
             while (self::isDecimalDigit($this->char())) {
                 $this->index++;
-                $count++;
             }
-            return mb_substr($this->expr, $start, $count, 'UTF-8');
+            return $this->charsFrom($start);
         }
 
         // slow path: need to check for separator
@@ -694,7 +710,7 @@ class PreJsPy
         // parse the float value and get the literal (if needed)
         $value = (float)($number);
         if ($this->config['Features']['Literals']['NumericSeparator'] !== '') {
-            $number = mb_substr($this->expr, $start, $this->index - $start, 'UTF-8');
+            $number = $this->charsFrom($start);
         }
 
         return [
@@ -769,7 +785,7 @@ class PreJsPy
             'type' => ExpressionType::LITERAL,
             'kind' => 'string',
             'value' => $s,
-            'raw' => mb_substr($this->expr, $start, $this->index - $start, 'UTF-8'),
+            'raw' => $this->charsFrom($start),
         ];
     }
 
@@ -807,7 +823,7 @@ class PreJsPy
         }
 
         // if the identifier is a known literal, return it!
-        $identifier = mb_substr($this->expr, $start, $this->index - $start, 'UTF-8');
+        $identifier = $this->charsFrom($start);
         if (array_key_exists($identifier, $this->config['Operators']['Literals'])) {
             return [
                 'type' => ExpressionType::LITERAL,

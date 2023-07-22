@@ -412,6 +412,22 @@ export class PreJsPy {
   }
 
   /**
+   * Returns count characters of the input string, starting at the current character.
+   */
+  private chars (count: number): string {
+    return this.expr.substring(this.index, this.index + count)
+  }
+
+  /**
+   * Returns the string of characters starting at start up to (but not including) the current character.
+   *
+   * @param start
+   */
+  private charsFrom (start: number): string {
+    return this.expr.substring(start, this.index)
+  }
+
+  /**
      * Parses a source string into a parse tree
      */
   Parse (expr: string): Expression {
@@ -570,7 +586,7 @@ export class PreJsPy {
     this.skipSpaces()
 
     for (let candidateLength = this.binaryOperatorLength; candidateLength > 0; candidateLength--) {
-      const candidate = this.expr.substring(this.index, this.index + candidateLength)
+      const candidate = this.chars(candidateLength)
       if (Object.prototype.hasOwnProperty.call(this.config.Operators.Binary, candidate)) {
         this.index += candidateLength
         return candidate
@@ -668,9 +684,10 @@ export class PreJsPy {
       return this.gobbleArray()
     }
 
-    let candidate = this.expr.substring(this.index, this.index + this.unaryOperatorLength)
-    let candidateLength = candidate.length
+    let candidateLength = this.unaryOperatorLength
     while (candidateLength > 0) {
+      const candidate = this.chars(candidateLength)
+
       if (this.config.Operators.Unary.includes(candidate)) {
         this.index += candidateLength
 
@@ -687,7 +704,6 @@ export class PreJsPy {
       }
 
       candidateLength--
-      candidate = candidate.substring(0, candidateLength)
     }
 
     if (PreJsPy.isIdentifierStart(ch) || ch === PreJsPy.CHAR_OPEN_PARENTHESES) {
@@ -709,7 +725,7 @@ export class PreJsPy {
       while (PreJsPy.isDecimalDigit(this.char())) {
         this.index++
       }
-      return this.expr.substring(start, this.index)
+      return this.charsFrom(start)
     }
 
     // slow path: need to check for separator
@@ -784,7 +800,7 @@ export class PreJsPy {
     // Parse the float value and get the literal (if needed)
     const value = parseFloat(number)
     if (this.config.Features.Literals.NumericSeparator !== '') {
-      number = this.expr.substring(start, this.index)
+      number = this.charsFrom(start)
     }
 
     return {
@@ -864,7 +880,7 @@ export class PreJsPy {
       type: ExpressionType.LITERAL,
       kind: 'string',
       value: str,
-      raw: this.expr.substring(start, this.index)
+      raw: this.charsFrom(start)
     }
   }
 
@@ -894,7 +910,7 @@ export class PreJsPy {
       this.index++
     }
 
-    const identifier = this.expr.substring(start, this.index)
+    const identifier = this.charsFrom(start)
 
     if (Object.prototype.hasOwnProperty.call(this.config.Operators.Literals, identifier)) {
       return {

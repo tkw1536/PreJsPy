@@ -427,6 +427,14 @@ class PreJsPy(object):
         """the current character or "" if the end of the string was reached"""
         return self.__expr[self.__index : self.__index + 1]
 
+    def __chars(self, count: int) -> str:
+        """Returns count characters of the input string, starting at the current character."""
+        return self.__expr[self.__index : self.__index + count]
+
+    def __charsFrom(self, start: int) -> str:
+        """Returns the string of characters starting at start up to (but not including) the current character"""
+        return self.__expr[start : self.__index]
+
     def Parse(self, expr: str) -> "Expression":
         """Parses an expression expr into a parse tree.
 
@@ -544,16 +552,13 @@ class PreJsPy(object):
     # then, return that binary operation
     def __gobbleBinaryOp(self) -> Optional[str]:
         self.__skipSpaces()
-        to_check = self.__expr[
-            self.__index : self.__index + self.__binaryOperatorLength
-        ]
-        tc_len = len(to_check)
+        tc_len = self.__binaryOperatorLength
         while tc_len > 0:
+            to_check = self.__chars(tc_len)
             if to_check in self.__config["Operators"]["Binary"]:
                 self.__index += tc_len
                 return to_check
             tc_len -= 1
-            to_check = to_check[:tc_len]
         return None
 
     # This function is responsible for gobbling an individual expression,
@@ -639,9 +644,9 @@ class PreJsPy(object):
         ):
             return self.__gobbleArray()
 
-        to_check = self.__expr[self.__index : self.__index + self.__unaryOperatorLength]
-        tc_len = len(to_check)
+        tc_len = self.__unaryOperatorLength
         while tc_len > 0:
+            to_check = self.__chars(tc_len)
             if to_check in self.__config["Operators"]["Unary"]:
                 self.__index += tc_len
                 argument = self.__gobbleToken()
@@ -654,7 +659,6 @@ class PreJsPy(object):
                     "argument": argument,
                 }
             tc_len -= 1
-            to_check = to_check[:tc_len]
 
         if PreJsPy.__isIdentifierStart(ch) or ch == PreJsPy.__CHAR_OPEN_PARENTHESES:
             return self.__gobbleVariable()
@@ -670,7 +674,7 @@ class PreJsPy(object):
             start = self.__index
             while self.__isDecimalDigit(self.__char()):
                 self.__index += 1
-            return self.__expr[start : self.__index]
+            return self.__charsFrom(start)
 
         # slow path: need to check for separator
         number = ""
@@ -731,7 +735,7 @@ class PreJsPy(object):
         # parse the float value and get the literal (if needed)
         value = float(number)
         if self.__config["Features"]["Literals"]["NumericSeparator"] != "":
-            number = self.__expr[start : self.__index]
+            number = self.__charsFrom(start)
 
         return {
             "type": ExpressionType.LITERAL,
@@ -793,7 +797,7 @@ class PreJsPy(object):
             "type": ExpressionType.LITERAL,
             "kind": "string",
             "value": s,
-            "raw": self.__expr[start : self.__index],
+            "raw": self.__charsFrom(start),
         }
 
     # Gobbles only identifiers
@@ -822,7 +826,7 @@ class PreJsPy(object):
             self.__index += 1
 
         # if the identifier is a known literal, return it!
-        identifier = self.__expr[start : self.__index]
+        identifier = self.__charsFrom(start)
         if identifier in self.__config["Operators"]["Literals"]:
             return {
                 "type": ExpressionType.LITERAL,
