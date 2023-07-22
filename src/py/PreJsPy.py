@@ -424,10 +424,8 @@ class PreJsPy(object):
     __expr: str = ""
 
     def __char(self) -> str:
-        if self.__index >= self.__length:
-            return ""
-
-        return self.__expr[self.__index]
+        """the current character or "" if the end of the string was reached"""
+        return self.__expr[self.__index : self.__index + 1]
 
     def Parse(self, expr: str) -> "Expression":
         """Parses an expression expr into a parse tree.

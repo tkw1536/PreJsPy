@@ -404,11 +404,10 @@ export class PreJsPy {
   private length: number = 0
   private expr: string = ''
 
-  /** returns the current character inside the input string */
+  /**
+   * @returns the current character or "" if the end of the string was reached
+   */
   private char (): string {
-    if (this.index >= this.length) {
-      return ''
-    }
     return this.expr.charAt(this.index)
   }
 

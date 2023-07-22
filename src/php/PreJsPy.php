@@ -308,12 +308,12 @@ class PreJsPy
     private int $length = 0;
     private string $expr = '';
 
+    /**
+     * @return string the current character or "" if the end of the string was reached
+     */
     private function char(): string
     {
-        if ($this->index > $this->length) {
-            return '';
-        }
-        return mb_substr($this->expr, $this->index, 1);
+        return mb_substr($this->expr, $this->index, 1, 'UTF-8');
     }
 
     /**
