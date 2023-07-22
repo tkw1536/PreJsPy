@@ -394,14 +394,16 @@ class PreJsPy
     /**
      * Advances the index to the next non-space character.
      *
-     * @return void
+     * @return string the next non-space character
      */
-    private function gobbleSpaces(): void
+    private function skipSpaces(): string
     {
-        $ch = $this->char();
-        while ($ch === self::CHAR_SPACE || $ch === self::CHAR_TAB) {
-            $this->index += 1;
+        while(TRUE) {
             $ch = $this->char();
+            if (!($ch === self::CHAR_SPACE || $ch === self::CHAR_TAB)) {
+                return $ch;
+            }
+            $this->index++;
         }
     }
 
@@ -413,35 +415,34 @@ class PreJsPy
     private function gobbleExpression(): array | null
     {
 
-        // This function attempts to parse a conditional expression or a binary expression.
-        // But if the conditional is turned of, we can go right into binary expressions.
-        if (!$this->config['Features']['Conditional']) {
-            return $this->gobbleBinaryExpression();
-        }
-
+        // gobble a binary expression
         $test = $this->gobbleBinaryExpression();
-        $this->gobbleSpaces();
 
-        // not a ternary expression => return immediately
-        if ($this->char() !== self::CHAR_QUESTIONMARK || $test === null) {
+        // only continue if there is a chance of finding a conditional
+        if ((!$this->config['Features']['Conditional']) || $test === null) {
             return $test;
         }
 
-        //  Ternary expression: test ? consequent : alternate
-        $this->index += 1;
+        // not a conditional expression => return immediately
+        $ch = $this->skipSpaces();
+        if ($ch !== self::CHAR_QUESTIONMARK || $test === null) {
+            return $test;
+        }
+
+        // conditional expression: test ? consequent : alternate
+        $this->index++;
         $consequent = $this->gobbleExpression();
         if ($consequent === null) {
             $this->throw_error('Expected expression');
         }
 
-        $this->gobbleSpaces();
-
         // need a ':' for the second part of the alternate
-        if ($this->char() !== self::CHAR_COLON) {
+        $ch = $this->skipSpaces();
+        if ($ch !== self::CHAR_COLON) {
             $this->throw_error('Expected ' . json_encode(self::CHAR_COLON));
         }
 
-        $this->index += 1;
+        $this->index++;
         $alternate = $this->gobbleExpression();
 
         if ($alternate === null) {
@@ -466,7 +467,7 @@ class PreJsPy
      */
     private function gobbleBinaryOp(): string|null
     {
-        $this->gobbleSpaces();
+        $this->skipSpaces();
 
         $to_check = mb_substr($this->expr, $this->index, $this->binaryOperatorLength, 'UTF-8');
         $tc_len = mb_strlen($to_check, 'UTF-8');
@@ -476,7 +477,7 @@ class PreJsPy
                 $this->index += $tc_len;
                 return $to_check;
             }
-            $tc_len -= 1;
+            $tc_len--;
             $to_check = mb_substr($to_check, 0, $tc_len, 'UTF-8');
         }
 
@@ -546,8 +547,8 @@ class PreJsPy
                 'left' => $exprs[$i - 1],
                 'right' => $node,
             ];
-            $j -= 1;
-            $i -= 1;
+            $j--;
+            $i--;
         }
 
         return $node;
@@ -561,8 +562,7 @@ class PreJsPy
      */
     public function gobbleToken(): array|null
     {
-        $this->gobbleSpaces();
-        $ch = $this->char();
+        $ch = $this->skipSpaces();
 
         // numeric literals
         if ($this->config['Features']['Literals']['Numeric'] && (self::isDecimalDigit($ch) || $ch === self::CHAR_PERIOD)) {
@@ -596,7 +596,7 @@ class PreJsPy
                 ];
             }
 
-            $tc_len -= 1;
+            $tc_len--;
             $to_check = mb_substr($to_check, 0, $tc_len, 'UTF-8');
         }
 
@@ -621,8 +621,8 @@ class PreJsPy
             $start = $this->index;
             $count = 0;
             while (self::isDecimalDigit($this->char())) {
-                $this->index += 1;
-                $count += 1;
+                $this->index++;
+                $count++;
             }
             return mb_substr($this->expr, $start, $count, 'UTF-8');
         }
@@ -635,7 +635,7 @@ class PreJsPy
             } else if ($this->char() !== $separator) {
                 break;
             }
-            $this->index += 1;
+            $this->index++;
         }
 
         return $number;
@@ -657,7 +657,7 @@ class PreJsPy
         if ($this->char() === self::CHAR_PERIOD) {
             // can start with a decimal marker
             $number .= '.';
-            $this->index += 1;
+            $this->index++;
 
             $number .= $this->gobbleDecimal();
         }
@@ -665,13 +665,13 @@ class PreJsPy
         $ch = $this->char();
         if ($ch === 'e' || $ch === 'E') { // exponent marker
             $number .= $this->char();
-            $this->index += 1;
+            $this->index++;
 
             $ch = $this->char();
             if ($ch === '+' || $ch === '-') {
                 // exponent sign
-                $number .= $this->char();
-                $this->index += 1;
+                $number .= $ch;
+                $this->index++;
             }
 
             // exponent itself
@@ -717,14 +717,14 @@ class PreJsPy
         $start = $this->index;
 
         $quote = $this->char();
-        $this->index += 1;
+        $this->index++;
 
         $closed = False;
         $ch = null;
 
         while ($this->index < $this->length) {
             $ch = $this->char();
-            $this->index += 1;
+            $this->index++;
 
             if ($ch === $quote) {
                 $closed = TRUE;
@@ -734,7 +734,7 @@ class PreJsPy
             if ($ch === '\\') {
                 // Check for all of the common escape codes
                 $ch = $this->char();
-                $this->index += 1;
+                $this->index++;
 
                 if ($ch === 'n') {
                     $s .= "\n";
@@ -794,7 +794,7 @@ class PreJsPy
 
         // record where the identifier starts
         $start = $this->index;
-        $this->index += 1;
+        $this->index++;
 
         // continue scanning the literal
         while ($this->index < $this->length) {
@@ -802,7 +802,7 @@ class PreJsPy
             if (!self::isIdentifierPart($ch)) {
                 break;
             }
-            $this->index += 1;
+            $this->index++;
         }
 
         // if the identifier is a known literal, return it!
@@ -845,12 +845,11 @@ class PreJsPy
         $hadComma = FALSE; // did we have a comma in the last iteration?
 
         while ($this->index < $this->length) {
-            $this->gobbleSpaces();
-            $ch = $this->char();
+            $ch = $this->skipSpaces();
 
             if ($ch === $end) {
                 $closed = TRUE;
-                $this->index += 1;
+                $this->index++;
                 break;
             }
 
@@ -860,7 +859,7 @@ class PreJsPy
                     $this->throw_error('Duplicate ' . json_encode(self::CHAR_COMMA));
                 }
                 $hadComma = TRUE;
-                $this->index += 1;
+                $this->index++;
                 continue;
             }
 
@@ -913,14 +912,13 @@ class PreJsPy
 
         // then iterate over operations applied to it
         while (true) {
-            $this->gobbleSpaces();
-            $ch = $this->char();
+            $ch = $this->skipSpaces();
 
-            $this->index += 1;
+            $this->index++;
 
             // access via .
             if ($this->config['Features']['Members']['Static'] && $ch === self::CHAR_PERIOD) {
-                $this->gobbleSpaces();
+                $this->skipSpaces();
 
                 $node = [
                     'type' => ExpressionType::MEMBER_EXP,
@@ -946,14 +944,12 @@ class PreJsPy
                     'property' => $prop,
                 ];
 
-                $this->gobbleSpaces();
-
-                $ch = $this->char();
+                $ch = $this->skipSpaces();
                 if ($ch !== self::CHAR_CLOSE_BRACKET) {
                     $this->throw_error('Unclosed ' . json_encode(self::CHAR_OPEN_BRACKET));
                 }
 
-                $this->index += 1;
+                $this->index++;
 
                 continue;
             }
@@ -969,7 +965,7 @@ class PreJsPy
             }
             
             // Done
-            $this->index -= 1;
+            $this->index--;
             break;
         }
 
@@ -987,15 +983,15 @@ class PreJsPy
      */
     private function gobbleGroup(): array|null
     {
-        $this->index += 1;
+        $this->index++;
         $expr = $this->gobbleExpression();
 
-        $this->gobbleSpaces();
-        if ($this->char() !== self::CHAR_CLOSE_PARENTHESES) {
+        $ch = $this->skipSpaces();
+        if ($ch !== self::CHAR_CLOSE_PARENTHESES) {
             $this->throw_error('Unclosed ' . json_encode(self::CHAR_OPEN_PARENTHESES));
         }
 
-        $this->index += 1;
+        $this->index++;
         return $expr;
     }
 
@@ -1009,7 +1005,7 @@ class PreJsPy
      */
     private function gobbleArray(): array
     {
-        $this->index += 1;
+        $this->index++;
 
         return [
             'type' => ExpressionType::ARRAY_EXP,

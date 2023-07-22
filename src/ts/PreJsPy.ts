@@ -412,16 +412,6 @@ export class PreJsPy {
     return this.expr.charAt(this.index)
   }
 
-  /** returns the current character code inside the input string
-   * @deprecated
-  */
-  private charCode (): number {
-    if (this.index >= this.length) {
-      return -1
-    }
-    return this.expr.charCodeAt(this.index)
-  }
-
   /**
      * Parses a source string into a parse tree
      */
@@ -503,13 +493,14 @@ export class PreJsPy {
   }
 
   /**
-     * Advances the index to the next non-space character.
-     */
-  private gobbleSpaces (): void {
+   * Advances the index to the next non-space character
+   * @returns the next non-space character
+   */
+  private skipSpaces (): string {
     while (true) {
       const ch = this.char()
       if (!(ch === PreJsPy.CHAR_SPACE || ch === PreJsPy.CHAR_TAB)) {
-        break
+        return ch
       }
       this.index++
     }
@@ -522,21 +513,23 @@ export class PreJsPy {
      * @returns
      */
   private gobbleExpression (): Expression | null {
-    // if we don't have the conditional enabled, gobble a binary expression
+    // gobble the binary expression
     const test = this.gobbleBinaryExpression()
-    if (!this.config.Features.Conditional) {
+
+    // only continue if there is a chance of finding a conditional
+    if (!this.config.Features.Conditional || test === null) {
       return test
     }
 
-    this.gobbleSpaces()
-
     // didn't actually get a conditional expression
-    if (test === null || this.char() !== PreJsPy.CHAR_QUESTIONMARK) {
-      return test
+    {
+      const ch = this.skipSpaces()
+      if (ch !== PreJsPy.CHAR_QUESTIONMARK) {
+        return test
+      }
     }
 
     // Conditional expression: test ? consequent : alternate
-
     this.index++
 
     const consequent = this.gobbleExpression()
@@ -544,9 +537,11 @@ export class PreJsPy {
       this.throwError('Expected expression')
     }
 
-    this.gobbleSpaces()
-    if (this.char() !== PreJsPy.CHAR_COLON) {
-      this.throwError('Expected ' + JSON.stringify(PreJsPy.CHAR_COLON))
+    {
+      const ch = this.skipSpaces()
+      if (ch !== PreJsPy.CHAR_COLON) {
+        this.throwError('Expected ' + JSON.stringify(PreJsPy.CHAR_COLON))
+      }
     }
 
     this.index++
@@ -572,7 +567,7 @@ export class PreJsPy {
      * @returns {string|false}
      */
   private gobbleBinaryOp (): string | null {
-    this.gobbleSpaces()
+    this.skipSpaces()
 
     for (let candidateLength = this.binaryOperatorLength; candidateLength > 0; candidateLength--) {
       const candidate = this.expr.substring(this.index, this.index + candidateLength)
@@ -656,8 +651,7 @@ export class PreJsPy {
   // An individual part of a binary expression:
   // e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
   private gobbleToken (): Expression | null {
-    this.gobbleSpaces()
-    const ch = this.char()
+    const ch = this.skipSpaces()
 
     // numeric literals
     if (this.config.Features.Literals.Numeric && (PreJsPy.isDecimalDigit(ch) || ch === PreJsPy.CHAR_PERIOD)) {
@@ -928,8 +922,7 @@ export class PreJsPy {
     let hadComma = false // did we have a comma in the last iteration?
 
     while (this.index < this.length) {
-      this.gobbleSpaces()
-      const ch = this.char()
+      const ch = this.skipSpaces()
       if (ch === end) { // done parsing
         closed = true
         this.index++
@@ -985,14 +978,13 @@ export class PreJsPy {
 
     // then iterate over operations applied to it
     while (true) {
-      this.gobbleSpaces()
-      const ch = this.char()
+      const ch = this.skipSpaces()
 
       this.index++
 
       // access via .
       if (this.config.Features.Members.Static && ch === PreJsPy.CHAR_PERIOD) {
-        this.gobbleSpaces()
+        this.skipSpaces()
         node = {
           type: ExpressionType.MEMBER_EXP,
           computed: false,
@@ -1016,8 +1008,8 @@ export class PreJsPy {
           property
         }
 
-        this.gobbleSpaces()
-        if (this.char() !== PreJsPy.CHAR_CLOSE_BRACKET) {
+        const ch = this.skipSpaces()
+        if (ch !== PreJsPy.CHAR_CLOSE_BRACKET) {
           this.throwError('Unclosed ' + JSON.stringify(PreJsPy.CHAR_OPEN_BRACKET))
         }
         this.index++
@@ -1052,9 +1044,9 @@ export class PreJsPy {
     this.index++
 
     const node = this.gobbleExpression()
-    this.gobbleSpaces()
 
-    if (this.char() !== PreJsPy.CHAR_CLOSE_PARENTHESES) {
+    const ch = this.skipSpaces()
+    if (ch !== PreJsPy.CHAR_CLOSE_PARENTHESES) {
       this.throwError('Unclosed ' + JSON.stringify(PreJsPy.CHAR_OPEN_PARENTHESES))
     }
 

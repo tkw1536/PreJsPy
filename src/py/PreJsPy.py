@@ -489,44 +489,48 @@ class PreJsPy(object):
 
         return {"type": ExpressionType.COMPOUND, "body": nodes}
 
-    def __gobbleSpaces(self) -> None:
-        """Push `index` up to the next non-space character"""
-        ch = self.__char()
-        while ch == PreJsPy.__CHAR_SPACE or ch == PreJsPy.__CHAR_TAB:
-            self.__index += 1
+    def __skipSpaces(self) -> str:
+        """
+        Advances the index to the next non-space character
+        Returns the next non-space character
+        """
+
+        while True:
             ch = self.__char()
+            if not (ch == PreJsPy.__CHAR_SPACE or ch == PreJsPy.__CHAR_TAB):
+                return ch
+            self.__index += 1
 
     def __gobbleExpression(self) -> Optional["Expression"]:
         """Main parsing function to parse any kind of expression"""
 
-        # This function attempts to parse a conditional expression or a binary expression.
-        # But if the conditional is turned of, we can go right into binary expressions.
-        if not self.__config["Features"]["Conditional"]:
-            return self.__gobbleBinaryExpression()
-
+        # gobble a binary expression
         test = self.__gobbleBinaryExpression()
-        self.__gobbleSpaces()
 
-        # not a ternary expression => return immediately
-        if self.__char() != PreJsPy.__CHAR_QUESTIONMARK or test is None:
+        # only continue if there is a chance of finding a conditional
+        if (not self.__config["Features"]["Conditional"]) or test is None:
             return test
 
-        #  Ternary expression: test ? consequent : alternate
+        # not a conditional expression => return immediately
+        ch = self.__skipSpaces()
+        if ch != PreJsPy.__CHAR_QUESTIONMARK:
+            return test
+
+        #  Ternary conditional: test ? consequent : alternate
         self.__index += 1
         consequent = self.__gobbleExpression()
-        if not consequent:
+        if consequent is None:
             self.__throw_error("Expected expression")
 
-        self.__gobbleSpaces()
-
         # need a ':' for the second part of the alternate
-        if self.__char() != PreJsPy.__CHAR_COLON:
+        ch = self.__skipSpaces()
+        if ch != PreJsPy.__CHAR_COLON:
             self.__throw_error("Expected " + json.dumps(PreJsPy.__CHAR_COLON))
 
         self.__index += 1
         alternate = self.__gobbleExpression()
 
-        if not alternate:
+        if alternate is None:
             self.__throw_error("Expected expression")
 
         return {
@@ -541,7 +545,7 @@ class PreJsPy(object):
     # and move down from 3 to 2 to 1 character until a matching binary operation is found
     # then, return that binary operation
     def __gobbleBinaryOp(self) -> Optional[str]:
-        self.__gobbleSpaces()
+        self.__skipSpaces()
         to_check = self.__expr[
             self.__index : self.__index + self.__binaryOperatorLength
         ]
@@ -616,8 +620,7 @@ class PreJsPy(object):
     # An individual part of a binary expression:
     # e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
     def __gobbleToken(self) -> Optional["Expression"]:
-        self.__gobbleSpaces()
-        ch = self.__char()
+        ch = self.__skipSpaces()
 
         # numeric literals
         if self.__config["Features"]["Literals"]["Numeric"] and (
@@ -849,8 +852,7 @@ class PreJsPy(object):
         hadComma = False  # did we have a comma in the last iteration?
 
         while self.__index < self.__length:
-            self.__gobbleSpaces()
-            ch = self.__char()
+            ch = self.__skipSpaces()
 
             if ch == end:
                 closed = True
@@ -902,8 +904,7 @@ class PreJsPy(object):
 
         # then iterate over operations applied to it
         while True:
-            self.__gobbleSpaces()
-            ch = self.__char()
+            ch = self.__skipSpaces()
 
             self.__index += 1
 
@@ -912,7 +913,7 @@ class PreJsPy(object):
                 self.__config["Features"]["Members"]["Static"]
                 and ch == PreJsPy.__CHAR_PERIOD
             ):
-                self.__gobbleSpaces()
+                self.__skipSpaces()
 
                 node = {
                     "type": ExpressionType.MEMBER_EXP,
@@ -938,9 +939,7 @@ class PreJsPy(object):
                     "property": prop,
                 }
 
-                self.__gobbleSpaces()
-
-                ch = self.__char()
+                ch = self.__skipSpaces()
                 if ch != PreJsPy.__CHAR_CLOSE_BRACKET:
                     self.__throw_error(
                         "Unclosed " + json.dumps(PreJsPy.__CHAR_OPEN_BRACKET)
@@ -980,9 +979,8 @@ class PreJsPy(object):
         self.__index += 1
         node = self.__gobbleExpression()
 
-        self.__gobbleSpaces()
-
-        if self.__char() != PreJsPy.__CHAR_CLOSE_PARENTHESES:
+        ch = self.__skipSpaces()
+        if ch != PreJsPy.__CHAR_CLOSE_PARENTHESES:
             self.__throw_error(
                 "Unclosed " + json.dumps(PreJsPy.__CHAR_OPEN_PARENTHESES)
             )
