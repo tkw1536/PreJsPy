@@ -175,28 +175,25 @@ export enum ExpressionType {
   ARRAY_EXP = 'ArrayExpression',
 }
 
-// LIST OF CHAR CODES
-function ord (input: string): number {
-  return input.charCodeAt(0)
-}
-const CODE_PERIOD = ord('.')
-const CODE_COMMA = ord(',')
-const CODE_SINGLE_QUOTE = ord('\'')
-const CODE_DOUBLE_QUOTE = ord('"')
-const CODE_OPEN_PARENTHESES = ord('(')
-const CODE_CLOSE_PARENTHESES = ord(')')
-const CODE_OPEN_BRACKET = ord('[')
-const CODE_CLOSE_BRACKET = ord(']')
-const CODE_QUESTIONMARK = ord('?')
-const CODE_SEMICOLON = ord(';')
-const CODE_COLON = ord(':')
-const CODE_SPACE = ord(' ')
-const CODE_TAB = ord('\t')
-
 /** ParsingResult represents a result from parsing */
 type ParsingResult<T> = [T, null] | [null, ParsingError]
 
 export class PreJsPy {
+  // LIST OF SPECIAL CHARACTER
+  private static readonly CHAR_PERIOD = '.'
+  private static readonly CHAR_COMMA = ','
+  private static readonly CHAR_SINGLE_QUOTE = '\''
+  private static readonly CHAR_DOUBLE_QUOTE = '"'
+  private static readonly CHAR_OPEN_PARENTHESES = '('
+  private static readonly CHAR_CLOSE_PARENTHESES = ')'
+  private static readonly CHAR_OPEN_BRACKET = '['
+  private static readonly CHAR_CLOSE_BRACKET = ']'
+  private static readonly CHAR_QUESTIONMARK = '?'
+  private static readonly CHAR_SEMICOLON = ';'
+  private static readonly CHAR_COLON = ':'
+  private static readonly CHAR_SPACE = ' '
+  private static readonly CHAR_TAB = '\t'
+
   /**
      * Throws a parser error with a given message and a given index.
      * @param message Message of error to throw.
@@ -225,23 +222,26 @@ export class PreJsPy {
 
   /**
      * Checks if a character is a decimal digit.
-     * @param ch Code of character to check.
+     * @param ch Character to check
      * @returns
      */
-  private static isDecimalDigit (ch: number): boolean {
-    return (ch >= 48 && ch <= 57) // 0...9
+  private static isDecimalDigit (ch: string): boolean {
+    return ch.length === 1 && (ch >= '0' && ch <= '9')
   };
 
   /**
      * Checks if a character is the start of an identifier.
-     * @param ch Code of character to check.
+     * @param ch Character to check
      * @returns
      */
-  private static isIdentifierStart (ch: number): boolean {
-    return (ch === 36) || (ch === 95) || // `$` and `_`
-            (ch >= 65 && ch <= 90) || // A...Z
-            (ch >= 97 && ch <= 122) || // a...z
-            ch >= 128 // non-ascii
+  private static isIdentifierStart (ch: string): boolean {
+    return ch.length === 1 && (
+      (ch === '$') ||
+      (ch === '_') ||
+      (ch >= 'A' && ch <= 'Z') ||
+      (ch >= 'a' && ch <= 'z') ||
+      ch.charCodeAt(0) >= 128 // non-ascii
+    )
   };
 
   /**
@@ -249,12 +249,15 @@ export class PreJsPy {
      * @param ch Code of character to check.
      * @returns
      */
-  private static isIdentifierPart (ch: number): boolean {
-    return (ch === 36) || (ch === 95) || // `$` and `_`
-            (ch >= 65 && ch <= 90) || // A...Z
-            (ch >= 97 && ch <= 122) || // a...z
-            (ch >= 48 && ch <= 57) || // 0...9
-            ch >= 128 // non-ascii
+  private static isIdentifierPart (ch: string): boolean {
+    return ch.length === 1 && (
+      (ch === '$') ||
+      (ch === '_') ||
+      (ch >= 'A' && ch <= 'Z') ||
+      (ch >= 'a' && ch <= 'z') ||
+      (ch >= '0' && ch <= '9') ||
+      ch.charCodeAt(0) >= 128 // non-ascii
+    )
   };
 
   /**
@@ -409,7 +412,9 @@ export class PreJsPy {
     return this.expr.charAt(this.index)
   }
 
-  /** returns the current character code inside the input string */
+  /** returns the current character code inside the input string
+   * @deprecated
+  */
   private charCode (): number {
     if (this.index >= this.length) {
       return -1
@@ -458,11 +463,10 @@ export class PreJsPy {
     const nodes: Expression[] = []
 
     while (this.index < this.length) {
-      const cc = this.charCode()
+      const ch = this.char()
 
-      // Expressions can be separated by semicolons, commas, or just inferred without any
-      // separators
-      if (cc === CODE_SEMICOLON || cc === CODE_COMMA) {
+      // Expressions can be separated by semicolons, commas, or just inferred without any separators
+      if (ch === PreJsPy.CHAR_SEMICOLON || ch === PreJsPy.CHAR_COMMA) {
         this.index++ // ignore separators
         continue
       }
@@ -503,8 +507,8 @@ export class PreJsPy {
      */
   private gobbleSpaces (): void {
     while (true) {
-      const ch = this.charCode()
-      if (!(ch === CODE_SPACE || ch === CODE_TAB)) {
+      const ch = this.char()
+      if (!(ch === PreJsPy.CHAR_SPACE || ch === PreJsPy.CHAR_TAB)) {
         break
       }
       this.index++
@@ -527,7 +531,7 @@ export class PreJsPy {
     this.gobbleSpaces()
 
     // didn't actually get a conditional expression
-    if (test === null || this.charCode() !== CODE_QUESTIONMARK) {
+    if (test === null || this.char() !== PreJsPy.CHAR_QUESTIONMARK) {
       return test
     }
 
@@ -541,8 +545,8 @@ export class PreJsPy {
     }
 
     this.gobbleSpaces()
-    if (this.charCode() !== CODE_COLON) {
-      this.throwError('Expected ' + JSON.stringify(':'))
+    if (this.char() !== PreJsPy.CHAR_COLON) {
+      this.throwError('Expected ' + JSON.stringify(PreJsPy.CHAR_COLON))
     }
 
     this.index++
@@ -653,20 +657,20 @@ export class PreJsPy {
   // e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
   private gobbleToken (): Expression | null {
     this.gobbleSpaces()
-    const ch = this.charCode()
+    const ch = this.char()
 
     // numeric literals
-    if (this.config.Features.Literals.Numeric && (PreJsPy.isDecimalDigit(ch) || ch === CODE_PERIOD)) {
+    if (this.config.Features.Literals.Numeric && (PreJsPy.isDecimalDigit(ch) || ch === PreJsPy.CHAR_PERIOD)) {
       return this.gobbleNumericLiteral()
     }
 
     // single or double quoted strings
-    if (this.config.Features.Literals.String && (ch === CODE_SINGLE_QUOTE || ch === CODE_DOUBLE_QUOTE)) {
+    if (this.config.Features.Literals.String && (ch === PreJsPy.CHAR_SINGLE_QUOTE || ch === PreJsPy.CHAR_DOUBLE_QUOTE)) {
       return this.gobbleStringLiteral()
     }
 
     // array literal
-    if (this.config.Features.Literals.Array && ch === CODE_OPEN_BRACKET) {
+    if (this.config.Features.Literals.Array && ch === PreJsPy.CHAR_OPEN_BRACKET) {
       return this.gobbleArray()
     }
 
@@ -692,8 +696,7 @@ export class PreJsPy {
       candidate = candidate.substring(0, candidateLength)
     }
 
-    if (PreJsPy.isIdentifierStart(ch) || ch === CODE_OPEN_PARENTHESES) { // open parenthesis
-      // `foo`, `bar.baz`
+    if (PreJsPy.isIdentifierStart(ch) || ch === PreJsPy.CHAR_OPEN_PARENTHESES) {
       return this.gobbleVariable()
     }
 
@@ -709,7 +712,7 @@ export class PreJsPy {
     const separator = this.config.Features.Literals.NumericSeparator
     if (separator === '') {
       const start = this.index
-      while (PreJsPy.isDecimalDigit(this.charCode())) {
+      while (PreJsPy.isDecimalDigit(this.char())) {
         this.index++
       }
       return this.expr.substring(start, this.index)
@@ -719,7 +722,7 @@ export class PreJsPy {
     let number = ''
 
     while (true) {
-      if (PreJsPy.isDecimalDigit(this.charCode())) {
+      if (PreJsPy.isDecimalDigit(this.char())) {
         number += this.char()
       } else if (this.char() !== separator) {
         break
@@ -741,7 +744,7 @@ export class PreJsPy {
     // gobble the number itself
     let number = this.gobbleDecimal()
 
-    if (this.charCode() === CODE_PERIOD) { // can start with a decimal marker
+    if (this.char() === PreJsPy.CHAR_PERIOD) { // can start with a decimal marker
       number += '.'
       this.index++
 
@@ -770,11 +773,12 @@ export class PreJsPy {
     }
 
     // validate that the number ends properly
-    const chCode = this.charCode()
-
-    // can't be a part of an identifier
-    if (PreJsPy.isIdentifierStart(chCode)) {
-      this.throwError('Variable names cannot start with a number like ' + JSON.stringify(number + this.char()))
+    // (can't be a part of an identifier)
+    {
+      const ch = this.char()
+      if (PreJsPy.isIdentifierStart(ch)) {
+        this.throwError('Variable names cannot start with a number like ' + JSON.stringify(number + ch))
+      }
     }
 
     // Parse the float value and get the literal (if needed)
@@ -874,17 +878,17 @@ export class PreJsPy {
   private gobbleIdentifier (): Literal | Identifier {
     const start = this.index
 
-    const cc = this.charCode()
-    if (cc === -1) {
+    const ch = this.char()
+    if (ch === '') {
       this.throwError('Expected literal')
     }
-    if (!PreJsPy.isIdentifierStart(this.charCode())) {
-      this.throwError('Unexpected ' + JSON.stringify(this.char()))
+    if (!PreJsPy.isIdentifierStart(ch)) {
+      this.throwError('Unexpected ' + JSON.stringify(ch))
     }
     this.index++
 
     while (this.index < this.length) {
-      if (!PreJsPy.isIdentifierPart(this.charCode())) {
+      if (!PreJsPy.isIdentifierPart(this.char())) {
         break
       }
       this.index++
@@ -917,7 +921,7 @@ export class PreJsPy {
      *
      * e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
      */
-  private gobbleArguments (start: string, termination: number): Expression[] {
+  private gobbleArguments (start: string, end: string): Expression[] {
     const args: Expression[] = []
 
     let closed = false // is the expression closed?
@@ -925,16 +929,16 @@ export class PreJsPy {
 
     while (this.index < this.length) {
       this.gobbleSpaces()
-      const cc = this.charCode()
-      if (cc === termination) { // done parsing
+      const ch = this.char()
+      if (ch === end) { // done parsing
         closed = true
         this.index++
         break
       }
 
-      if (cc === CODE_COMMA) { // between expressions
+      if (ch === PreJsPy.CHAR_COMMA) { // between expressions
         if (hadComma) {
-          this.throwError('Duplicate ' + JSON.stringify(','))
+          this.throwError('Duplicate ' + JSON.stringify(PreJsPy.CHAR_COMMA))
         }
         hadComma = true
         this.index++
@@ -945,15 +949,15 @@ export class PreJsPy {
       const wantsComma = args.length > 0
       if (wantsComma !== hadComma) {
         if (wantsComma) {
-          this.throwError('Expected ' + JSON.stringify(','))
+          this.throwError('Expected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
         } else {
-          this.throwError('Unexpected ' + JSON.stringify(','))
+          this.throwError('Unexpected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
         }
       }
 
       const node = this.gobbleExpression()
       if (node === null || node.type === ExpressionType.COMPOUND) {
-        this.throwError('Expected ' + JSON.stringify(','))
+        this.throwError('Expected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
       }
 
       args.push(node)
@@ -974,7 +978,7 @@ export class PreJsPy {
      */
   private gobbleVariable (): Expression | null {
     // parse a group or identifier first
-    let node: Expression | null = (this.charCode() === CODE_OPEN_PARENTHESES) ? this.gobbleGroup() : this.gobbleIdentifier()
+    let node: Expression | null = (this.char() === PreJsPy.CHAR_OPEN_PARENTHESES) ? this.gobbleGroup() : this.gobbleIdentifier()
     if (node === null) {
       return null
     }
@@ -982,12 +986,12 @@ export class PreJsPy {
     // then iterate over operations applied to it
     while (true) {
       this.gobbleSpaces()
-      const cc = this.charCode()
+      const ch = this.char()
 
       this.index++
 
       // access via .
-      if (this.config.Features.Members.Static && cc === CODE_PERIOD) {
+      if (this.config.Features.Members.Static && ch === PreJsPy.CHAR_PERIOD) {
         this.gobbleSpaces()
         node = {
           type: ExpressionType.MEMBER_EXP,
@@ -999,7 +1003,7 @@ export class PreJsPy {
       }
 
       // access via []s
-      if (this.config.Features.Members.Computed && cc === CODE_OPEN_BRACKET) {
+      if (this.config.Features.Members.Computed && ch === PreJsPy.CHAR_OPEN_BRACKET) {
         const property = this.gobbleExpression()
         if (property === null) {
           this.throwError('Expected Expression')
@@ -1013,19 +1017,18 @@ export class PreJsPy {
         }
 
         this.gobbleSpaces()
-        const cc = this.charCode()
-        if (cc !== CODE_CLOSE_BRACKET) {
-          this.throwError('Unclosed ' + JSON.stringify('['))
+        if (this.char() !== PreJsPy.CHAR_CLOSE_BRACKET) {
+          this.throwError('Unclosed ' + JSON.stringify(PreJsPy.CHAR_OPEN_BRACKET))
         }
         this.index++
         continue
       }
 
       // call with ()s
-      if (this.config.Features.Calls && cc === CODE_OPEN_PARENTHESES) {
+      if (this.config.Features.Calls && ch === PreJsPy.CHAR_OPEN_PARENTHESES) {
         node = {
           type: ExpressionType.CALL_EXP,
-          arguments: this.gobbleArguments('(', CODE_CLOSE_PARENTHESES),
+          arguments: this.gobbleArguments(PreJsPy.CHAR_OPEN_PARENTHESES, PreJsPy.CHAR_CLOSE_PARENTHESES),
           callee: node
         }
         continue
@@ -1051,8 +1054,8 @@ export class PreJsPy {
     const node = this.gobbleExpression()
     this.gobbleSpaces()
 
-    if (this.charCode() !== CODE_CLOSE_PARENTHESES) {
-      this.throwError('Unclosed ' + JSON.stringify('('))
+    if (this.char() !== PreJsPy.CHAR_CLOSE_PARENTHESES) {
+      this.throwError('Unclosed ' + JSON.stringify(PreJsPy.CHAR_OPEN_PARENTHESES))
     }
 
     this.index++
@@ -1069,7 +1072,7 @@ export class PreJsPy {
 
     return {
       type: ExpressionType.ARRAY_EXP,
-      elements: this.gobbleArguments('[', CODE_CLOSE_BRACKET)
+      elements: this.gobbleArguments(PreJsPy.CHAR_OPEN_BRACKET, PreJsPy.CHAR_CLOSE_BRACKET)
     }
   }
 

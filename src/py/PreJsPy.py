@@ -206,19 +206,19 @@ class PreJsPy(object):
     """Represents a single instance of the PreJSPy Parser."""
 
     # List of char codes.
-    CODE_PERIOD: Final = ord(".")
-    CODE_COMMA: Final = ord(",")  # ','
-    CODE_SINGLE_QUOTE: Final = ord("'")  # single quote
-    CODE_DOUBLE_QUOTE: Final = ord('"')  # double quotes
-    CODE_OPEN_PARENTHESES: Final = ord("(")  # (
-    CODE_CLOSE_PARENTHESES: Final = ord(")")  # )
-    CODE_OPEN_BRACKET: Final = ord("[")  # [
-    CODE_CLOSE_BRACKET: Final = ord("]")  # ]
-    CODE_QUESTIONMARK: Final = ord("?")  # ?
-    CODE_SEMICOLON: Final = ord(";")  # ;
-    CODE_COLON: Final = ord(":")  # :
-    CODE_SPACE: Final = ord(" ")
-    CODE_TAB: Final = ord("\t")
+    __CHAR_PERIOD: Final = "."
+    __CHAR_COMMA: Final = ","
+    __CHAR_SINGLE_QUOTE: Final = "'"
+    __CHAR_DOUBLE_QUOTE: Final = '"'
+    __CHAR_OPEN_PARENTHESES: Final = "("
+    __CHAR_CLOSE_PARENTHESES: Final = ")"
+    __CHAR_OPEN_BRACKET: Final = "["
+    __CHAR_CLOSE_BRACKET: Final = "]"
+    __CHAR_QUESTIONMARK: Final = "?"
+    __CHAR_SEMICOLON: Final = ";"
+    __CHAR_COLON: Final = ":"
+    __CHAR_SPACE: Final = " "
+    __CHAR_TAB: Final = "\t"
 
     # =======================
     # STATIC HELPER FUNCTIONS
@@ -253,45 +253,44 @@ class PreJsPy(object):
         return max(map(len, ary))
 
     @staticmethod
-    def __isDecimalDigit(ch: int) -> bool:
+    def __isDecimalDigit(ch: str) -> bool:
         """Checks if a character is a decimal digit.
 
-        :param ch: Code of character to check.
+        :param ch: Character to check
         """
 
-        return ch >= 48 and ch <= 57  # 0...9
+        return len(ch) == 1 and ch >= "0" and ch <= "9"  # 0...9
 
     @staticmethod
-    def __isIdentifierStart(ch: int) -> bool:
+    def __isIdentifierStart(ch: str) -> bool:
         """Checks if a character is the start of an identifier.
 
-        :param ch: Code of character to check.
+        :param ch: Character to check
         """
 
-        # '$', A..Z and a..z and non-ascii
-        return (
-            (ch == 36)
-            or (ch == 95)
-            or (ch >= 65 and ch <= 90)
-            or (ch >= 97 and ch <= 122)
-            or (ch >= 128)
+        return len(ch) == 1 and (
+            (ch == "$")
+            or (ch == "_")
+            or (ch >= "A" and ch <= "Z")
+            or (ch >= "a" and ch <= "z")
+            or (ord(ch) >= 128)  # non-ascii
         )
 
     @staticmethod
-    def __isIdentifierPart(ch: int) -> bool:
+    def __isIdentifierPart(ch: str) -> bool:
         """Checks if a character is part of an identifier.
 
-        :param ch: Code of character to check.
+        :param ch: Character to check
         """
 
         # `$`,  `_`, A...Z, a...z and 0...9 and non-ascii
-        return (
-            (ch == 36)
-            or (ch == 95)
-            or (ch >= 65 and ch <= 90)
-            or (ch >= 97 and ch <= 122)
-            or (ch >= 48 and ch <= 57)
-            or (ch > 128)
+        return len(ch) == 1 and (
+            (ch == "$")
+            or (ch == "_")
+            or (ch >= "A" and ch <= "Z")
+            or (ch >= "a" and ch <= "z")
+            or (ch >= "0" and ch <= "9")
+            or (ord(ch) >= 128)  # non-ascii
         )
 
     # =======
@@ -430,12 +429,6 @@ class PreJsPy(object):
 
         return self.__expr[self.__index]
 
-    def __charCode(self) -> int:
-        if self.__index >= self.__length:
-            return -1
-
-        return ord(self.__expr[self.__index])
-
     def Parse(self, expr: str) -> "Expression":
         """Parses an expression expr into a parse tree.
 
@@ -468,10 +461,10 @@ class PreJsPy(object):
         nodes = []
 
         while self.__index < self.__length:
-            ch_i = self.__charCode()
+            ch = self.__char()
 
             # Expressions can be separated by semicolons, commas, or just inferred without any separators
-            if ch_i == PreJsPy.CODE_SEMICOLON or ch_i == PreJsPy.CODE_COMMA:
+            if ch == PreJsPy.__CHAR_SEMICOLON or ch == PreJsPy.__CHAR_COMMA:
                 self.__index += 1  # ignore separators
                 continue
 
@@ -498,10 +491,10 @@ class PreJsPy(object):
 
     def __gobbleSpaces(self) -> None:
         """Push `index` up to the next non-space character"""
-        ch = self.__charCode()
-        while ch == PreJsPy.CODE_SPACE or ch == PreJsPy.CODE_TAB:
+        ch = self.__char()
+        while ch == PreJsPy.__CHAR_SPACE or ch == PreJsPy.__CHAR_TAB:
             self.__index += 1
-            ch = self.__charCode()
+            ch = self.__char()
 
     def __gobbleExpression(self) -> Optional["Expression"]:
         """Main parsing function to parse any kind of expression"""
@@ -515,7 +508,7 @@ class PreJsPy(object):
         self.__gobbleSpaces()
 
         # not a ternary expression => return immediately
-        if self.__charCode() != PreJsPy.CODE_QUESTIONMARK or test is None:
+        if self.__char() != PreJsPy.__CHAR_QUESTIONMARK or test is None:
             return test
 
         #  Ternary expression: test ? consequent : alternate
@@ -527,8 +520,8 @@ class PreJsPy(object):
         self.__gobbleSpaces()
 
         # need a ':' for the second part of the alternate
-        if self.__charCode() != PreJsPy.CODE_COLON:
-            self.__throw_error("Expected " + json.dumps(":"))
+        if self.__char() != PreJsPy.__CHAR_COLON:
+            self.__throw_error("Expected " + json.dumps(PreJsPy.__CHAR_COLON))
 
         self.__index += 1
         alternate = self.__gobbleExpression()
@@ -624,24 +617,24 @@ class PreJsPy(object):
     # e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
     def __gobbleToken(self) -> Optional["Expression"]:
         self.__gobbleSpaces()
-        ch = self.__charCode()
+        ch = self.__char()
 
         # numeric literals
         if self.__config["Features"]["Literals"]["Numeric"] and (
-            self.__isDecimalDigit(ch) or ch == PreJsPy.CODE_PERIOD
+            self.__isDecimalDigit(ch) or ch == PreJsPy.__CHAR_PERIOD
         ):
             return self.__gobbleNumericLiteral()
 
         # single or double quoted strings
         if self.__config["Features"]["Literals"]["String"] and (
-            ch == PreJsPy.CODE_SINGLE_QUOTE or ch == PreJsPy.CODE_DOUBLE_QUOTE
+            ch == PreJsPy.__CHAR_SINGLE_QUOTE or ch == PreJsPy.__CHAR_DOUBLE_QUOTE
         ):
             return self.__gobbleStringLiteral()
 
         # array literal
         if (
             self.__config["Features"]["Literals"]["Array"]
-            and ch == PreJsPy.CODE_OPEN_BRACKET
+            and ch == PreJsPy.__CHAR_OPEN_BRACKET
         ):
             return self.__gobbleArray()
 
@@ -662,8 +655,7 @@ class PreJsPy(object):
             tc_len -= 1
             to_check = to_check[:tc_len]
 
-        if PreJsPy.__isIdentifierStart(ch) or ch == PreJsPy.CODE_OPEN_PARENTHESES:
-            # `foo`, `bar.baz`
+        if PreJsPy.__isIdentifierStart(ch) or ch == PreJsPy.__CHAR_OPEN_PARENTHESES:
             return self.__gobbleVariable()
 
         return None
@@ -675,7 +667,7 @@ class PreJsPy(object):
         separator = self.__config["Features"]["Literals"]["NumericSeparator"]
         if separator == "":
             start = self.__index
-            while self.__isDecimalDigit(self.__charCode()):
+            while self.__isDecimalDigit(self.__char()):
                 self.__index += 1
             return self.__expr[start : self.__index]
 
@@ -683,9 +675,10 @@ class PreJsPy(object):
         number = ""
         while True:
             # iterate over decimal digit
-            if self.__isDecimalDigit(self.__charCode()):
-                number += self.__char()
-            elif self.__char() != separator:
+            digit = self.__char()
+            if self.__isDecimalDigit(digit):
+                number += digit
+            elif digit != separator:
                 break
 
             self.__index += 1
@@ -700,7 +693,7 @@ class PreJsPy(object):
         # gobble the number itself
         number = self.__gobbleDecimal()
 
-        if self.__charCode() == PreJsPy.CODE_PERIOD:
+        if self.__char() == PreJsPy.__CHAR_PERIOD:
             # can start with a decimal marker
             number += self.__char()
             self.__index += 1
@@ -727,12 +720,12 @@ class PreJsPy(object):
 
             number += exponent
 
-        chCode = self.__charCode()
+        ch = self.__char()
         # Check to make sure this isn't a variable name that start with a number (123abc)
-        if PreJsPy.__isIdentifierStart(chCode):
+        if PreJsPy.__isIdentifierStart(ch):
             self.__throw_error(
                 "Variable names cannot start with a number like "
-                + json.dumps(number + self.__char()),
+                + json.dumps(number + ch),
             )
 
         # parse the float value and get the literal (if needed)
@@ -809,12 +802,12 @@ class PreJsPy(object):
     # (e.g. `true`, `false`, `null`)
     def __gobbleIdentifier(self) -> "Union[Literal, Identifier]":
         # can't gobble an identifier if the first character isn't the start of one.
-        cc = self.__charCode()
-        if cc == -1:
+        ch = self.__char()
+        if ch == "":
             self.__throw_error("Expected literal")
 
-        if not PreJsPy.__isIdentifierStart(cc):
-            self.__throw_error("Unexpected " + json.dumps(self.__char()))
+        if not PreJsPy.__isIdentifierStart(ch):
+            self.__throw_error("Unexpected " + json.dumps(ch))
 
         # record where the identifier starts
         start = self.__index
@@ -822,8 +815,8 @@ class PreJsPy(object):
 
         # continue scanning the literal
         while self.__index < self.__length:
-            cc = self.__charCode()
-            if not PreJsPy.__isIdentifierPart(cc):
+            ch = self.__char()
+            if not PreJsPy.__isIdentifierPart(ch):
                 break
 
             self.__index += 1
@@ -849,7 +842,7 @@ class PreJsPy(object):
     # `(` or `[` has already been gobbled, and gobbles expressions and commas
     # until the terminator character `)` or `]` is encountered.
     # e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
-    def __gobbleArguments(self, start: str, termination: int) -> List["Expression"]:
+    def __gobbleArguments(self, start: str, end: str) -> List["Expression"]:
         args = []  # type: List[Expression]
 
         closed = False  # is the expression closed?
@@ -857,17 +850,17 @@ class PreJsPy(object):
 
         while self.__index < self.__length:
             self.__gobbleSpaces()
-            ch_i = self.__charCode()
+            ch = self.__char()
 
-            if ch_i == termination:
+            if ch == end:
                 closed = True
                 self.__index += 1
                 break
 
             # between expressions
-            if ch_i == PreJsPy.CODE_COMMA:
+            if ch == PreJsPy.__CHAR_COMMA:
                 if hadComma:
-                    self.__throw_error("Duplicate " + json.dumps(","))
+                    self.__throw_error("Duplicate " + json.dumps(PreJsPy.__CHAR_COMMA))
                 hadComma = True
                 self.__index += 1
                 continue
@@ -875,14 +868,14 @@ class PreJsPy(object):
             wantsComma = len(args) > 0
             if wantsComma != hadComma:
                 if wantsComma:
-                    self.__throw_error("Expected " + json.dumps(","))
+                    self.__throw_error("Expected " + json.dumps(PreJsPy.__CHAR_COMMA))
                 else:
-                    self.__throw_error("Unexpected " + json.dumps(","))
+                    self.__throw_error("Unexpected " + json.dumps(PreJsPy.__CHAR_COMMA))
 
             node = self.__gobbleExpression()
 
             if (node is None) or node["type"] == ExpressionType.COMPOUND:
-                self.__throw_error("Expected " + json.dumps(","))
+                self.__throw_error("Expected " + json.dumps(PreJsPy.__CHAR_COMMA))
 
             args.append(node)
             hadComma = False
@@ -898,8 +891,8 @@ class PreJsPy(object):
     # e.g. `Math.acos(obj.angle)`
     def __gobbleVariable(self) -> Optional["Expression"]:
         # parse a group or identifier first
-        cc = self.__charCode()
-        if cc == PreJsPy.CODE_OPEN_PARENTHESES:
+        ch = self.__char()
+        if ch == PreJsPy.__CHAR_OPEN_PARENTHESES:
             node = self.__gobbleGroup()
         else:
             node = self.__gobbleIdentifier()
@@ -910,14 +903,14 @@ class PreJsPy(object):
         # then iterate over operations applied to it
         while True:
             self.__gobbleSpaces()
-            cc = self.__charCode()
+            ch = self.__char()
 
             self.__index += 1
 
             # access via .
             if (
                 self.__config["Features"]["Members"]["Static"]
-                and cc == PreJsPy.CODE_PERIOD
+                and ch == PreJsPy.__CHAR_PERIOD
             ):
                 self.__gobbleSpaces()
 
@@ -932,7 +925,7 @@ class PreJsPy(object):
             # access via []s
             if (
                 self.__config["Features"]["Members"]["Computed"]
-                and cc == PreJsPy.CODE_OPEN_BRACKET
+                and ch == PreJsPy.__CHAR_OPEN_BRACKET
             ):
                 prop = self.__gobbleExpression()
                 if prop is None:
@@ -947,9 +940,11 @@ class PreJsPy(object):
 
                 self.__gobbleSpaces()
 
-                cc = self.__charCode()
-                if cc != PreJsPy.CODE_CLOSE_BRACKET:
-                    self.__throw_error("Unclosed " + json.dumps("["))
+                ch = self.__char()
+                if ch != PreJsPy.__CHAR_CLOSE_BRACKET:
+                    self.__throw_error(
+                        "Unclosed " + json.dumps(PreJsPy.__CHAR_OPEN_BRACKET)
+                    )
 
                 self.__index += 1
 
@@ -958,12 +953,13 @@ class PreJsPy(object):
             # call with ()s
             if (
                 self.__config["Features"]["Calls"]
-                and cc == PreJsPy.CODE_OPEN_PARENTHESES
+                and ch == PreJsPy.__CHAR_OPEN_PARENTHESES
             ):
                 node = {
                     "type": ExpressionType.CALL_EXP,
                     "arguments": self.__gobbleArguments(
-                        "(", PreJsPy.CODE_CLOSE_PARENTHESES
+                        PreJsPy.__CHAR_OPEN_PARENTHESES,
+                        PreJsPy.__CHAR_CLOSE_PARENTHESES,
                     ),
                     "callee": node,
                 }
@@ -986,8 +982,10 @@ class PreJsPy(object):
 
         self.__gobbleSpaces()
 
-        if self.__charCode() != PreJsPy.CODE_CLOSE_PARENTHESES:
-            self.__throw_error("Unclosed " + json.dumps("("))
+        if self.__char() != PreJsPy.__CHAR_CLOSE_PARENTHESES:
+            self.__throw_error(
+                "Unclosed " + json.dumps(PreJsPy.__CHAR_OPEN_PARENTHESES)
+            )
 
         self.__index += 1
         return node
@@ -1000,7 +998,9 @@ class PreJsPy(object):
 
         return {
             "type": ExpressionType.ARRAY_EXP,
-            "elements": self.__gobbleArguments("[", PreJsPy.CODE_CLOSE_BRACKET),
+            "elements": self.__gobbleArguments(
+                PreJsPy.__CHAR_OPEN_BRACKET, PreJsPy.__CHAR_CLOSE_BRACKET
+            ),
         }
 
     @staticmethod
