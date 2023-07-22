@@ -630,9 +630,10 @@ class PreJsPy
         // slow path: need to check for separator
         $number = '';
         while (True) {
-            if ($this->isDecimalDigit($this->char())) {
-                $number .= $this->char();
-            } else if ($this->char() !== $separator) {
+            $ch = $this->char();
+            if ($this->isDecimalDigit($ch)) {
+                $number .= $ch;
+            } else if ($ch !== $separator) {
                 break;
             }
             $this->index++;
@@ -654,7 +655,8 @@ class PreJsPy
         // gobble the number itself
         $number = $this->gobbleDecimal();
 
-        if ($this->char() === self::CHAR_PERIOD) {
+        $ch = $this->char();
+        if ($ch === self::CHAR_PERIOD) {
             // can start with a decimal marker
             $number .= '.';
             $this->index++;
@@ -664,7 +666,7 @@ class PreJsPy
 
         $ch = $this->char();
         if ($ch === 'e' || $ch === 'E') { // exponent marker
-            $number .= $this->char();
+            $number .= $ch;
             $this->index++;
 
             $ch = $this->char();
@@ -719,8 +721,7 @@ class PreJsPy
         $quote = $this->char();
         $this->index++;
 
-        $closed = False;
-        $ch = null;
+        $closed = FALSE;
 
         while ($this->index < $this->length) {
             $ch = $this->char();

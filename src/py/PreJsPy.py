@@ -678,10 +678,10 @@ class PreJsPy(object):
         number = ""
         while True:
             # iterate over decimal digit
-            digit = self.__char()
-            if self.__isDecimalDigit(digit):
-                number += digit
-            elif digit != separator:
+            ch = self.__char()
+            if self.__isDecimalDigit(ch):
+                number += ch
+            elif ch != separator:
                 break
 
             self.__index += 1
@@ -698,28 +698,27 @@ class PreJsPy(object):
 
         if self.__char() == PreJsPy.__CHAR_PERIOD:
             # can start with a decimal marker
-            number += self.__char()
+            number += "."
             self.__index += 1
 
             number += self.__gobbleDecimal()
 
         ch = self.__char()
         if ch == "e" or ch == "E":  # exponent marker
-            number += self.__char()
+            number += ch
             self.__index += 1
 
             ch = self.__char()
             if ch == "+" or ch == "-":
                 # exponent sign
-                number += self.__char()
+                number += ch
                 self.__index += 1
 
             # exponent itself
             exponent = self.__gobbleDecimal()
             if exponent == "":
-                self.__throw_error(
-                    "Expected exponent after " + json.dumps(number + self.__char())
-                )
+                ch = self.__char()
+                self.__throw_error("Expected exponent after " + json.dumps(number + ch))
 
             number += exponent
 

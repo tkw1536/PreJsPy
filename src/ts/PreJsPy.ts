@@ -473,7 +473,8 @@ export class PreJsPy {
     if (this.index < this.length) {
       // If we weren't able to find a binary expression and are out of room, then
       // the expression passed in probably has too much
-      this.throwError('Unexpected ' + JSON.stringify(this.char()))
+      const ch = this.char()
+      this.throwError('Unexpected ' + JSON.stringify(ch))
     }
 
     // If there's only one expression just try returning the expression
@@ -716,9 +717,10 @@ export class PreJsPy {
     let number = ''
 
     while (true) {
-      if (PreJsPy.isDecimalDigit(this.char())) {
-        number += this.char()
-      } else if (this.char() !== separator) {
+      const ch = this.char()
+      if (PreJsPy.isDecimalDigit(ch)) {
+        number += ch
+      } else if (ch !== separator) {
         break
       }
 
@@ -738,11 +740,15 @@ export class PreJsPy {
     // gobble the number itself
     let number = this.gobbleDecimal()
 
-    if (this.char() === PreJsPy.CHAR_PERIOD) { // can start with a decimal marker
-      number += '.'
-      this.index++
+    // can start with a decimal marker
+    {
+      const ch = this.char()
+      if (ch === PreJsPy.CHAR_PERIOD) {
+        number += '.'
+        this.index++
 
-      number += this.gobbleDecimal()
+        number += this.gobbleDecimal()
+      }
     }
 
     const ch = this.char()
@@ -760,7 +766,8 @@ export class PreJsPy {
 
       const exponent = this.gobbleDecimal()
       if (exponent === '') {
-        this.throwError('Expected exponent after ' + JSON.stringify(number + this.char()))
+        const ch = this.char()
+        this.throwError('Expected exponent after ' + JSON.stringify(number + ch))
       }
 
       number += exponent
