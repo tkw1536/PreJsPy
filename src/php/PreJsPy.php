@@ -498,9 +498,12 @@ class PreJsPy
 
             // Reduce: make a binary expression from the three topmost entries.
             while ((count($ops) > 0) && $precedence < end($ops)['precedence']) {
+                // the code maintains invariance count(ops) === count(exprs) + 1
+                // so the array_pop()s are safe because count(ops.length) >= 1 and count(exprs) >= 2
                 $right = array_pop($exprs);
                 $left = array_pop($exprs);
                 $op = array_pop($ops);
+
                 $exprs[] = [
                     'type' => ExpressionType::BINARY_EXP,
                     'operator' => $op['value'],

@@ -604,15 +604,12 @@ export class PreJsPy {
       const precedence = this.config.Operators.Binary[value]
 
       while ((ops.length > 0) && (precedence < ops[ops.length - 1].precedence)) {
-        const right = exprs.pop()
-        const left = exprs.pop()
-        const op = ops.pop()
+        // the code maintains invariance ops.length === exprs.length + 1
+        // so the .pop()s are safe because ops.length >= 1 and exprs.length >= 2
 
-        if (typeof right === 'undefined' || typeof left === 'undefined' || typeof op === 'undefined') {
-          // the code guarantees that there are always enough expressions.
-          // so this case should never occur.
-          this.throwError('Logic Error: Expression and operator length inconsistent')
-        }
+        const right = exprs.pop()! // eslint-disable-line @typescript-eslint/no-non-null-assertion
+        const left = exprs.pop()! // eslint-disable-line @typescript-eslint/no-non-null-assertion
+        const op = ops.pop()! // eslint-disable-line @typescript-eslint/no-non-null-assertion
 
         exprs.push({
           type: ExpressionType.BINARY_EXP,

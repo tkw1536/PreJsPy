@@ -568,8 +568,11 @@ class PreJsPy(object):
 
             # Reduce: make a binary expression from the three topmost entries.
             while (len(ops) > 0) and precedence < ops[-1]["precedence"]:
+                # the code maintains invariance len(ops) == len(exprs) + 1
+                # so the .pop()s are safe because len(ops) >= 1 and len(exprs) >= 2
                 right, left = exprs.pop(), exprs.pop()
                 op = ops.pop()
+
                 exprs.append(
                     {
                         "type": ExpressionType.BINARY_EXP,
