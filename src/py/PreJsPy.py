@@ -621,7 +621,7 @@ class PreJsPy(object):
         if self.__config["Features"]["Literals"]["String"] and (
             ch == PreJsPy.__CHAR_SINGLE_QUOTE or ch == PreJsPy.__CHAR_DOUBLE_QUOTE
         ):
-            return self.__gobbleStringLiteral()
+            return self.__gobbleStringLiteral(ch)
 
         # array literal
         if (
@@ -647,7 +647,7 @@ class PreJsPy(object):
             tc_len -= 1
 
         if PreJsPy.__isIdentifierStart(ch) or ch == PreJsPy.__CHAR_OPEN_PARENTHESES:
-            return self.__gobbleVariable()
+            return self.__gobbleVariable(ch)
 
         return None
 
@@ -732,12 +732,10 @@ class PreJsPy(object):
 
     # Parses a string literal, staring with single or double quotes with basic support for escape codes
     # e.g. `"hello world"`, `'this is\nJSEP'`
-    def __gobbleStringLiteral(self) -> "StringLiteral":
+    def __gobbleStringLiteral(self, quote: str) -> "StringLiteral":
         s = ""
 
         start = self.__index
-
-        quote = self.__char()
         self.__index += 1
 
         closed = False
@@ -790,9 +788,8 @@ class PreJsPy(object):
     # e.g.: `foo`, `_value`, `$x1`
     # Also, this function checks if that identifier is a literal:
     # (e.g. `true`, `false`, `null`)
-    def __gobbleIdentifier(self) -> "Union[Literal, Identifier]":
+    def __gobbleIdentifier(self, ch: str) -> "Union[Literal, Identifier]":
         # can't gobble an identifier if the first character isn't the start of one.
-        ch = self.__char()
         if ch == "":
             self.__throw_error("Expected literal")
 
@@ -878,13 +875,14 @@ class PreJsPy(object):
     # e.g. `foo`, `bar.baz`, `foo['bar'].baz`
     # It also gobbles function calls:
     # e.g. `Math.acos(obj.angle)`
-    def __gobbleVariable(self) -> Optional["Expression"]:
+    #
+    # ch is the current character.
+    def __gobbleVariable(self, ch: str) -> Optional["Expression"]:
         # parse a group or identifier first
-        ch = self.__char()
         if ch == PreJsPy.__CHAR_OPEN_PARENTHESES:
             node = self.__gobbleGroup()
         else:
-            node = self.__gobbleIdentifier()
+            node = self.__gobbleIdentifier(ch)
 
         if node is None:
             return None
@@ -900,13 +898,13 @@ class PreJsPy(object):
                 self.__config["Features"]["Members"]["Static"]
                 and ch == PreJsPy.__CHAR_PERIOD
             ):
-                self.__skipSpaces()
+                ch = self.__skipSpaces()
 
                 node = {
                     "type": ExpressionType.MEMBER_EXP,
                     "computed": False,
                     "object": node,
-                    "property": self.__gobbleIdentifier(),
+                    "property": self.__gobbleIdentifier(ch),
                 }
                 continue
 

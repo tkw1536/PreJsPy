@@ -555,7 +555,7 @@ class PreJsPy
 
         // single or double quoted strings
         if ($this->config['Features']['Literals']['String'] && (self::CHAR_SINGLE_QUOTE === $ch || self::CHAR_DOUBLE_QUOTE === $ch)) {
-            return $this->gobbleStringLiteral();
+            return $this->gobbleStringLiteral($ch);
         }
 
         // array literal
@@ -584,7 +584,7 @@ class PreJsPy
         }
 
         if (self::isIdentifierStart($ch) || self::CHAR_OPEN_PARENTHESES === $ch) {
-            return $this->gobbleVariable();
+            return $this->gobbleVariable($ch);
         }
 
         return null;
@@ -687,14 +687,14 @@ class PreJsPy
      * Parses a string literal, staring with single or double quotes with basic support for escape codes.
      *
      * e.g. `'hello world'`, `'this is\nJSEP'`
+     *
+     * @param string $quote the quote character
      */
-    private function gobbleStringLiteral(): array
+    private function gobbleStringLiteral(string $quote): array
     {
         $s = '';
 
         $start = $this->index;
-
-        $quote = $this->char();
         ++$this->index;
 
         $closed = false;
@@ -755,10 +755,9 @@ class PreJsPy
      * Also, this function checks if that identifier is a literal:
      * (e.g. `true`, `false`, `null`).
      */
-    private function gobbleIdentifier(): array
+    private function gobbleIdentifier(string $ch): array
     {
         // can't gobble an identifier if the first character isn't the start of one.
-        $ch = $this->char();
         if ('' === $ch) {
             $this->throw_error('Expected literal');
         }
@@ -866,15 +865,16 @@ class PreJsPy
      * e.g. `foo`, `bar.baz`, `foo['bar'].baz`
      * It also gobbles function calls:
      * e.g. `Math.acos(obj.angle)`.
+     *
+     * @param string $ch the current character
      */
-    private function gobbleVariable(): array|null
+    private function gobbleVariable(string $ch): array|null
     {
         // parse a group or identifier first
-        $ch = $this->char();
         if (self::CHAR_OPEN_PARENTHESES === $ch) {
             $node = $this->gobbleGroup();
         } else {
-            $node = $this->gobbleIdentifier();
+            $node = $this->gobbleIdentifier($ch);
         }
         if (null === $node) {
             return null;
@@ -888,13 +888,13 @@ class PreJsPy
 
             // access via .
             if ($this->config['Features']['Members']['Static'] && self::CHAR_PERIOD === $ch) {
-                $this->skipSpaces();
+                $ch = $this->skipSpaces();
 
                 $node = [
                     'type' => ExpressionType::MEMBER_EXP,
                     'computed' => false,
                     'object' => $node,
-                    'property' => $this->gobbleIdentifier(),
+                    'property' => $this->gobbleIdentifier($ch),
                 ];
 
                 continue;

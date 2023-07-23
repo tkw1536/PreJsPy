@@ -688,7 +688,7 @@ export class PreJsPy {
     }
 
     if (PreJsPy.isIdentifierStart(ch) || ch === PreJsPy.CHAR_OPEN_PARENTHESES) {
-      return this.gobbleVariable()
+      return this.gobbleVariable(ch)
     }
 
     return null
@@ -872,10 +872,9 @@ export class PreJsPy {
      * Also, this function checks if that identifier is a literal:
      * (e.g. `true`, `false`, `null`) or `this`
      */
-  private gobbleIdentifier (): Literal | Identifier {
+  private gobbleIdentifier (ch: string): Literal | Identifier {
     const start = this.index
 
-    const ch = this.char()
     if (ch === '') {
       this.throwError('Expected literal')
     }
@@ -969,12 +968,15 @@ export class PreJsPy {
      * Gobble a non-literal variable name. This variable name may include properties
      * e.g. `foo`, `bar.baz`, `foo['bar'].baz`
      *
+     * ch is the first character
+     *
+     *
      * It also gobbles function calls:
      * Math.acos(obj.angle)
      */
-  private gobbleVariable (): Expression | null {
+  private gobbleVariable (ch: string): Expression | null {
     // parse a group or identifier first
-    let node: Expression | null = (this.char() === PreJsPy.CHAR_OPEN_PARENTHESES) ? this.gobbleGroup() : this.gobbleIdentifier()
+    let node: Expression | null = (ch === PreJsPy.CHAR_OPEN_PARENTHESES) ? this.gobbleGroup() : this.gobbleIdentifier(ch)
     if (node === null) {
       return null
     }
@@ -987,12 +989,12 @@ export class PreJsPy {
 
       // access via .
       if (this.config.Features.Members.Static && ch === PreJsPy.CHAR_PERIOD) {
-        this.skipSpaces()
+        const ch = this.skipSpaces()
         node = {
           type: ExpressionType.MEMBER_EXP,
           computed: false,
           object: node,
-          property: this.gobbleIdentifier()
+          property: this.gobbleIdentifier(ch)
         }
         continue
       }
