@@ -28,7 +28,7 @@ class TestPreJsPy {
    * Runs all test cases from a given file.
    * @param fn
    */
-  static testFile (fn: string): void {
+  static testFile (fn: string, N: number): void {
     process.stdout.write('Running tests from ' + fn + ' ')
 
     // read all the tests
@@ -38,9 +38,10 @@ class TestPreJsPy {
     const p = new PreJsPy()
 
     // and run all the test cases.
-    tests.forEach((t) => this.runSingleFile(p, t))
+    let total = 0.0
+    tests.forEach((t) => { total += this.runSingleFile(p, t, N) })
 
-    console.log(' OK.')
+    console.log(' OK (' + total.toFixed(10) + 'ms)')
   }
 
   /**
@@ -51,15 +52,12 @@ class TestPreJsPy {
   *
   *
   * @param inp Input to parse.
-  * @type param string
   *
   * @param out Expected output.
-  * @type out string
   *
   * @param message Message of test case.
-  * @type message string
   */
-  private static runSingleFile (instance: PreJsPy, test: TestCase): void {
+  private static runSingleFile (instance: PreJsPy, test: TestCase, N: number): number {
     instance.SetConfig(this.parseJSONFile('_config.json')) // reset the config to default
     instance.SetConfig(test.config) // set config
 
@@ -90,6 +88,18 @@ class TestPreJsPy {
       process.stderr.write('Failed testcase ' + test.message + ':\nGot Result:      ' + gotResultStr + '\nExpected Result: ' + wantResultStr + '\n')
       process.exit(1)
     }
+
+    // do benchmarking!
+    let bench = 0.0
+    const input = test.input
+    for (let i = 0; i < N; i++) {
+      const start = performance.now()
+      instance.TryParse(input)
+      const end = performance.now()
+
+      bench += (end - start) / 1000
+    }
+    return bench / N
   }
 
   /** deterministic version of JSON.stringify that takes key order into account */
@@ -119,7 +129,7 @@ console.log('Node Version: ' + process.version)
 console.log('')
 
 const files: string[] = TestPreJsPy.parseJSONFile('_manifest.json')
-files.forEach(file => TestPreJsPy.testFile(file))
+files.forEach(file => TestPreJsPy.testFile(file, 10_000))
 
 console.log('')
 console.log('Done.')

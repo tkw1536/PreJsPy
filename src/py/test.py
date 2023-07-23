@@ -3,6 +3,7 @@ import PreJsPy
 import sys
 import json
 import os.path
+import time
 
 from typing import TYPE_CHECKING
 from typing import Any
@@ -27,7 +28,7 @@ class TestPreJsPy(object):
             return json.load(f)
 
     @classmethod
-    def test_file(cls, fn: str):
+    def test_file(cls, fn: str, N: int) -> float:
         """
         Runs all tests stored in a given JSON file.
 
@@ -43,13 +44,16 @@ class TestPreJsPy(object):
         p = PreJsPy.PreJsPy()
 
         # and run all the test cases.
+        count = 0.0
         for t in tests:
-            cls.run_single_case(p, t)
+            count += cls.run_single_case(p, t, N)
 
-        print(" OK")
+        print(" OK ({:.10f}ms)".format(count))
 
     @classmethod
-    def run_single_case(cls, instance: "PreJsPy.PreJsPy", test: "TestCase"):
+    def run_single_case(
+        cls, instance: "PreJsPy.PreJsPy", test: "TestCase", N: int
+    ) -> float:
         """Runs a single test case.
         :param instance: PreJsPy instance to test on.
         """
@@ -97,6 +101,16 @@ class TestPreJsPy(object):
             )
             sys.exit(1)
 
+        # do benchmarking
+        bench = 0.0
+        input = test["input"]
+        for _ in range(N):
+            start = time.time()
+            instance.TryParse(input)
+            end = time.time()
+            bench += end - start
+        return bench / N
+
     @classmethod
     def json_serialize(cls, value):
         return json.dumps(cls.__value_normalize(value), sort_keys=True)
@@ -122,7 +136,7 @@ print("")
 
 files = TestPreJsPy.read_json_file("_manifest.json")
 for file in files:
-    TestPreJsPy.test_file(file)
+    TestPreJsPy.test_file(file, 10_000)
 
 print("")
 print("Done.")

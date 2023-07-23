@@ -27,8 +27,9 @@ class TestPreJsPy
      * Runs all tests stored in a given json file.
      *
      * @param string $fn filename to load
+     * @param int    $N  number of times to run for benchmarking purposes
      */
-    public static function testFile(string $fn): void
+    public static function testFile(string $fn, int $N): float
     {
         echo 'Running tests from '.$fn.' ';
 
@@ -39,13 +40,17 @@ class TestPreJsPy
         $p = new PreJsPy();
 
         // and run all the test cases.
+        $total = (float) 0;
         foreach ($tests as $t) {
-            self::runSingleCase($p, $t);
+            $time = self::runSingleCase($p, $t, $N);
+            $total += $time ?? 0;
         }
-        echo " OK\n";
+        echo ' OK ('.number_format($total, 10, '.', ',') * 1000 ."ms)\n";
+
+        return $total;
     }
 
-    private static function runSingleCase(PreJsPy $instance, array $test)
+    private static function runSingleCase(PreJsPy $instance, array $test, int $N): float
     {
         $instance->SetConfig(self::parseJSONFile('_config.json'));
         $instance->SetConfig($test['config']);
@@ -75,6 +80,19 @@ class TestPreJsPy
 
             exit;
         }
+
+        // do benchmarking
+        $bench = (float) 0;
+        $input = $test['input'];
+        for ($i = 0; $i < $N; ++$i) {
+            $start = microtime(true);
+            $instance->TryParse($input);
+            $end = microtime(true);
+
+            $bench += $end - $start;
+        }
+
+        return $bench / $N;
     }
 
     /**
@@ -114,7 +132,7 @@ echo "\n";
 /** @var string[] */
 $files = TestPreJsPy::parseJSONFile('_manifest.json');
 foreach ($files as $file) {
-    TestPreJsPy::testFile($file);
+    TestPreJsPy::testFile($file, 10_000);
 }
 
 echo "\n";
