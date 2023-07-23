@@ -84,42 +84,6 @@ class PreJsPy
     // =======================
 
     /**
-     * Gets the longest key length of an object.
-     *
-     * @param array $o object to iterate over
-     */
-    private static function getMaxKeyLen(array $o): int
-    {
-        $len = 0;
-        foreach ($o as $key => $value) {
-            $keyLen = mb_strlen($key, 'UTF-8');
-            if ($keyLen > $len) {
-                $len = $keyLen;
-            }
-        }
-
-        return $len;
-    }
-
-    /**
-     * Gets the maximum length of the member of any members of an array.
-     *
-     * @param array $ary array to iterate over
-     */
-    private static function getMaxMemLen(array $ary): int
-    {
-        $len = 0;
-        foreach ($ary as $value) {
-            $valueLen = mb_strlen($value, 'UTF-8');
-            if ($valueLen > $len) {
-                $len = $valueLen;
-            }
-        }
-
-        return $len;
-    }
-
-    /**
      * Checks if a character is a decimal digit.
      *
      * @param string $ch character to check
@@ -136,13 +100,13 @@ class PreJsPy
      */
     private static function isIdentifierStart(string $ch): bool
     {
-        return (
+        return
             ('$' === $ch)
             || ('_' === $ch)
             || ($ch >= 'a' && $ch <= 'z')
             || ($ch >= 'A' && $ch <= 'Z')
             || (ord($ch) >= 128) // non-ascii
-        );
+        ;
     }
 
     /**
@@ -152,49 +116,21 @@ class PreJsPy
      */
     private static function isIdentifierPart(string $ch): bool
     {
-        return (
+        return
             ('$' === $ch)
             || ('_' === $ch)
             || ($ch >= 'a' && $ch <= 'z')
             || ($ch >= 'A' && $ch <= 'Z')
             || ($ch >= '0' && $ch <= '9')
             || (ord($ch) >= 128) // non-ascii
-        );
+        ;
     }
 
-    /**
-     * Copies a dictionary or list.
-     */
-    private static function copy(array $ary): array
-    {
-        return array_merge([], $ary);
-    }
+    // region "Config"
 
-    // =======
-    // CONFIG
-    // =======
-
-    /**
-     * Gets the current config used by this parser.
-     */
-    public function GetConfig(): array
-    {
-        return [
-            'Operators' => [
-                'Literals' => self::copy($this->config['Operators']['Literals']),
-                'Unary' => self::copy($this->config['Operators']['Unary']),
-                'Binary' => self::copy($this->config['Operators']['Binary']),
-            ],
-            'Features' => [
-                'Compound' => $this->config['Features']['Compound'],
-                'Conditional' => $this->config['Features']['Conditional'],
-                'Identifiers' => $this->config['Features']['Identifiers'],
-                'Calls' => $this->config['Features']['Calls'],
-                'Members' => self::copy($this->config['Features']['Members']),
-                'Literals' => self::copy($this->config['Features']['Literals']),
-            ],
-        ];
-    }
+    private array $config;
+    private int $unaryOperatorLength;
+    private int $binaryOperatorLength;
 
     /**
      * Sets the config used by this parser.
@@ -206,66 +142,136 @@ class PreJsPy
     public function SetConfig(array|null $config): array
     {
         if (null !== $config) {
-            if (array_key_exists('Operators', $config)) {
-                if (array_key_exists('Literals', $config['Operators'])) {
-                    $this->config['Operators']['Literals'] = self::copy($config['Operators']['Literals']);
-                }
-                if (array_key_exists('Unary', $config['Operators'])) {
-                    $this->config['Operators']['Unary'] = self::copy($config['Operators']['Unary']);
-                    $this->unaryOperatorLength = self::getMaxMemLen($this->config['Operators']['Unary']);
-                }
-                if (array_key_exists('Binary', $config['Operators'])) {
-                    $this->config['Operators']['Binary'] = self::copy($config['Operators']['Binary']);
-                    $this->binaryOperatorLength = self::getMaxKeyLen($this->config['Operators']['Binary']);
-                }
-            }
-            if (array_key_exists('Features', $config)) {
-                if (array_key_exists('Compound', $config['Features'])) {
-                    $this->config['Features']['Compound'] = $config['Features']['Compound'];
-                }
-                if (array_key_exists('Conditional', $config['Features'])) {
-                    $this->config['Features']['Conditional'] = $config['Features']['Conditional'];
-                }
-                if (array_key_exists('Identifiers', $config['Features'])) {
-                    $this->config['Features']['Identifiers'] = $config['Features']['Identifiers'];
-                }
-                if (array_key_exists('Calls', $config['Features'])) {
-                    $this->config['Features']['Calls'] = $config['Features']['Calls'];
-                }
-                if (array_key_exists('Members', $config['Features'])) {
-                    if (array_key_exists('Computed', $config['Features']['Members'])) {
-                        $this->config['Features']['Members']['Computed'] = $config['Features']['Members']['Computed'];
-                    }
-                    if (array_key_exists('Static', $config['Features']['Members'])) {
-                        $this->config['Features']['Members']['Static'] = $config['Features']['Members']['Static'];
-                    }
-                }
-                if (array_key_exists('Literals', $config['Features'])) {
-                    if (array_key_exists('Array', $config['Features']['Literals'])) {
-                        $this->config['Features']['Literals']['Array'] = $config['Features']['Literals']['Array'];
-                    }
-                    if (array_key_exists('Numeric', $config['Features']['Literals'])) {
-                        $this->config['Features']['Literals']['Numeric'] = $config['Features']['Literals']['Numeric'];
-                    }
-                    if (array_key_exists('NumericSeparator', $config['Features']['Literals'])) {
-                        $this->config['Features']['Literals']['NumericSeparator'] = $config['Features']['Literals']['NumericSeparator'];
-                    }
-                    if (array_key_exists('String', $config['Features']['Literals'])) {
-                        $this->config['Features']['Literals']['String'] = $config['Features']['Literals']['String'];
-                    }
-                }
-            }
+            self::assign($this->config, $config, 'Operators', 'Literals');
+            self::assign($this->config, $config, 'Operators', 'Unary');
+            self::assign($this->config, $config, 'Operators', 'Binary');
+            self::assign($this->config, $config, 'Features', 'Compound');
+            self::assign($this->config, $config, 'Features', 'Conditional');
+            self::assign($this->config, $config, 'Features', 'Identifiers');
+            self::assign($this->config, $config, 'Features', 'Calls');
+            self::assign($this->config, $config, 'Features', 'Members', 'Computed');
+            self::assign($this->config, $config, 'Features', 'Members', 'Static');
+            self::assign($this->config, $config, 'Features', 'Literals', 'Array');
+            self::assign($this->config, $config, 'Features', 'Literals', 'Numeric');
+            self::assign($this->config, $config, 'Features', 'Literals', 'NumericSeparator');
+            self::assign($this->config, $config, 'Features', 'Literals', 'String');
+
+            $this->unaryOperatorLength = self::maxArrayValueLen($this->config['Operators']['Unary']);
+            $this->binaryOperatorLength = self::maxObjectKeyLen($this->config['Operators']['Binary']);
         }
 
         return $this->GetConfig();
     }
 
+    /**
+     * Gets the current config used by this parser.
+     */
+    public function GetConfig(): array
+    {
+        return self::clone($this->config);
+    }
+
+    /**
+     * Assigns a specific nested property from source to dest.
+     * The value is cloned.
+     *
+     * This is roughly equivalent to
+     *
+     * $dest[$path[0]]...[$path[n]] = self::clone($source[$path[0]]...[$path[n]])
+     *
+     * with appropriate existence checks.
+     *
+     * @param {array} dest the destination element to assign into
+     * @param {array} source the source object to assign from
+     * @param {string} path the names of properties to navigate through
+     */
+    private function assign(array &$dest, array &$source, string ...$path): void
+    {
+        // skip if we have no elements
+        if (0 === count($path)) {
+            return;
+        }
+
+        // find the source and dest properties
+        $destProp = &$dest;
+        $sourceProp = &$source;
+
+        // iterate through to the penultimate element
+        foreach (array_slice($path, 0, -1) as $element) {
+            if (!is_array($destProp) || !array_key_exists($element, $destProp)) {
+                return;
+            }
+            if (!is_array($sourceProp) || !array_key_exists($element, $sourceProp)) {
+                return;
+            }
+            $destProp = &$destProp[$element];
+            $sourceProp = &$sourceProp[$element];
+        }
+
+        // check the last element
+        $element = end($path);
+        if (!is_array($destProp) || !array_key_exists($element, $destProp)) {
+            return;
+        }
+        if (!is_array($sourceProp) || !array_key_exists($element, $sourceProp)) {
+            return;
+        }
+
+        // and assign the clone
+        $destProp[$element] = self::clone($sourceProp[$element]);
+    }
+
+    /** clone makes a deep clone of an object, recursing into arrays */
+    private function clone(mixed $obj): mixed
+    {
+        if (is_array($obj)) {
+            return array_map(fn ($x) => $this->clone($x), $obj);
+        }
+
+        return $obj;
+    }
+
+    /**
+     * Gets the longest key length of an object.
+     *
+     * @param array $o object to iterate over
+     */
+    private static function maxObjectKeyLen(array $o): int
+    {
+        $len = 0;
+        foreach ($o as $key => $value) {
+            $keyLen = mb_strlen($key, 'UTF-8');
+            if ($keyLen > $len) {
+                $len = $keyLen;
+            }
+        }
+
+        return $len;
+    }
+
+    /**
+     * Gets the maximum length of the member of an array.
+     *
+     * @param array $ary array to iterate over
+     */
+    private static function maxArrayValueLen(array $ary): int
+    {
+        $len = 0;
+        foreach ($ary as $value) {
+            $valueLen = mb_strlen($value, 'UTF-8');
+            if ($valueLen > $len) {
+                $len = $valueLen;
+            }
+        }
+
+        return $len;
+    }
+
+    // endregion
+
     // =========
     // INIT CODE
     // =========
-    private array $config;
-    private int $unaryOperatorLength;
-    private int $binaryOperatorLength;
 
     /**
      * Creates a new PreJsPy instance.

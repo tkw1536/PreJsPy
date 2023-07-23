@@ -5,6 +5,8 @@
     licensed under MIT
 """
 
+import copy
+
 from typing import (
     Any,
     Dict,
@@ -232,27 +234,6 @@ class PreJsPy(object):
         raise ParsingError(error, self.__expr, self.__index)
 
     @staticmethod
-    def __getMaxKeyLen(o: Dict[str, int]) -> int:
-        """Gets the longest key length of an object
-
-        :param o: Object to iterate over
-        """
-
-        if len(o.keys()) == 0:
-            return 0
-        return max(map(len, o.keys()))
-
-    @staticmethod
-    def __getMaxMemLen(ary: List[str]) -> int:
-        """Gets the maximum length of the member of any members of an array.
-
-        :param ary: Array to iterate over.
-        """
-        if len(ary) == 0:
-            return 0
-        return max(map(len, ary))
-
-    @staticmethod
     def __isDecimalDigit(ch: str) -> bool:
         """Checks if a character is a decimal digit.
 
@@ -297,23 +278,11 @@ class PreJsPy(object):
     # CONFIG
     # =======
 
-    def GetConfig(self) -> "Config":
-        """Gets the current config used by this parser."""
-        return {
-            "Operators": {
-                "Literals": self.__config["Operators"]["Literals"].copy(),
-                "Unary": self.__config["Operators"]["Unary"].copy(),
-                "Binary": self.__config["Operators"]["Binary"].copy(),
-            },
-            "Features": {
-                "Compound": self.__config["Features"]["Compound"],
-                "Conditional": self.__config["Features"]["Conditional"],
-                "Identifiers": self.__config["Features"]["Identifiers"],
-                "Calls": self.__config["Features"]["Calls"],
-                "Members": self.__config["Features"]["Members"].copy(),
-                "Literals": self.__config["Features"]["Literals"].copy(),
-            },
-        }
+    # region "Config"
+
+    __config: "Config"
+    __unaryOperatorLength: int
+    __binaryOperatorLength: int
 
     def SetConfig(self, config: Optional["PartialConfig"]) -> "Config":
         """Sets the config used by this parser.
@@ -322,77 +291,95 @@ class PreJsPy(object):
         """
 
         if config is not None:
-            if "Operators" in config:
-                if "Literals" in config["Operators"]:
-                    self.__config["Operators"]["Literals"] = config["Operators"][
-                        "Literals"
-                    ].copy()
-                if "Unary" in config["Operators"]:
-                    self.__config["Operators"]["Unary"] = config["Operators"][
-                        "Unary"
-                    ].copy()
-                    self.__unaryOperatorLength = PreJsPy.__getMaxMemLen(
-                        self.__config["Operators"]["Unary"]
-                    )
-                if "Binary" in config["Operators"]:
-                    self.__config["Operators"]["Binary"] = config["Operators"][
-                        "Binary"
-                    ].copy()
-                    self.__binaryOperatorLength = PreJsPy.__getMaxKeyLen(
-                        self.__config["Operators"]["Binary"]
-                    )
-            if "Features" in config:
-                if "Compound" in config["Features"]:
-                    self.__config["Features"]["Compound"] = config["Features"][
-                        "Compound"
-                    ]
-                if "Conditional" in config["Features"]:
-                    self.__config["Features"]["Conditional"] = config["Features"][
-                        "Conditional"
-                    ]
-                if "Identifiers" in config["Features"]:
-                    self.__config["Features"]["Identifiers"] = config["Features"][
-                        "Identifiers"
-                    ]
-                if "Calls" in config["Features"]:
-                    self.__config["Features"]["Calls"] = config["Features"]["Calls"]
+            PreJsPy.__assign(self.__config, config, "Operators", "Literals")
+            PreJsPy.__assign(self.__config, config, "Operators", "Unary")
+            PreJsPy.__assign(self.__config, config, "Operators", "Binary")
 
-                if "Members" in config["Features"]:
-                    if "Computed" in config["Features"]["Members"]:
-                        self.__config["Features"]["Members"]["Computed"] = config[
-                            "Features"
-                        ]["Members"]["Computed"]
-                    if "Static" in config["Features"]["Members"]:
-                        self.__config["Features"]["Members"]["Static"] = config[
-                            "Features"
-                        ]["Members"]["Static"]
-                if "Literals" in config["Features"]:
-                    if "Array" in config["Features"]["Literals"]:
-                        self.__config["Features"]["Literals"]["Array"] = config[
-                            "Features"
-                        ]["Literals"]["Array"]
-                    if "Numeric" in config["Features"]["Literals"]:
-                        self.__config["Features"]["Literals"]["Numeric"] = config[
-                            "Features"
-                        ]["Literals"]["Numeric"]
-                    if "NumericSeparator" in config["Features"]["Literals"]:
-                        self.__config["Features"]["Literals"][
-                            "NumericSeparator"
-                        ] = config["Features"]["Literals"]["NumericSeparator"]
-                    if "String" in config["Features"]["Literals"]:
-                        self.__config["Features"]["Literals"]["String"] = config[
-                            "Features"
-                        ]["Literals"]["String"]
+            PreJsPy.__assign(self.__config, config, "Features", "Compound")
+            PreJsPy.__assign(self.__config, config, "Features", "Conditional")
+            PreJsPy.__assign(self.__config, config, "Features", "Identifiers")
+            PreJsPy.__assign(self.__config, config, "Features", "Calls")
+
+            PreJsPy.__assign(self.__config, config, "Features", "Members", "Computed")
+            PreJsPy.__assign(self.__config, config, "Features", "Members", "Static")
+
+            PreJsPy.__assign(self.__config, config, "Features", "Literals", "Array")
+            PreJsPy.__assign(self.__config, config, "Features", "Literals", "Numeric")
+            PreJsPy.__assign(
+                self.__config, config, "Features", "Literals", "NumericSeparator"
+            )
+            PreJsPy.__assign(self.__config, config, "Features", "Literals", "String")
+
+            self.__unaryOperatorLength = PreJsPy.__maxArrayValueLen(
+                self.__config["Operators"]["Unary"]
+            )
+            self.__binaryOperatorLength = PreJsPy.__maxObjectKeyLen(
+                self.__config["Operators"]["Binary"]
+            )
 
         return self.GetConfig()
+
+    def GetConfig(self) -> "Config":
+        """Gets the current config used by this parser."""
+
+        return copy.deepcopy(self.__config)
+
+    @classmethod
+    def __assign(cls, dest: Any, source: Any, *path: str) -> None:
+        # skip if we have no elements
+        if len(path) == 0:
+            return
+
+        # find the source and dest properties
+        destProp = dest
+        sourceProp = source
+
+        # iterate through to the penultimate elements
+        for element in path[:-1]:
+            if not (isinstance(destProp, dict)) or (element not in destProp):
+                return
+            if not (isinstance(sourceProp, dict)) or (element not in sourceProp):
+                return
+            destProp = destProp[element]
+            sourceProp = sourceProp[element]
+
+        # check the last element
+        element = path[-1]
+        if not (isinstance(destProp, dict)) or (element not in destProp):
+            return
+        if not (isinstance(sourceProp, dict)) or (element not in sourceProp):
+            return
+
+        # and assign the clone
+        destProp[element] = copy.deepcopy(sourceProp[element])
+
+    @staticmethod
+    def __maxObjectKeyLen(o: Dict[str, int]) -> int:
+        """Gets the longest key length of an object
+
+        :param o: Object to iterate over
+        """
+
+        keys = o.keys()
+        if len(keys) == 0:
+            return 0
+        return max(map(len, keys))
+
+    @staticmethod
+    def __maxArrayValueLen(ary: List[str]) -> int:
+        """Gets the maximum length of the member of any members of an array.
+
+        :param ary: Array to iterate over.
+        """
+        if len(ary) == 0:
+            return 0
+        return max(map(len, ary))
+
+    # endregion
 
     # =========
     # INIT CODE
     # =========
-
-    __config: "Config"
-    __unaryOperatorLength: int
-    __binaryOperatorLength: int
 
     def __init__(self) -> None:
         """Creates a new PreJSPyParser instance."""

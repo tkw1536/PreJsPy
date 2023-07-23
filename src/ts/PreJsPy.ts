@@ -11,17 +11,17 @@
  * An Expression represents a parsed tree for PreJSPy.
  */
 export type Expression =
-    Identifier |
-    Literal |
-    StringLiteral |
-    NumericLiteral |
-    Compound |
-    Member |
-    Call |
-    Unary |
-    Binary |
-    Condition |
-    Ary
+  Identifier |
+  Literal |
+  StringLiteral |
+  NumericLiteral |
+  Compound |
+  Member |
+  Call |
+  Unary |
+  Binary |
+  Condition |
+  Ary
 
 class ParsingError extends Error {
   readonly error: string
@@ -203,24 +203,6 @@ export class PreJsPy {
   }
 
   /**
-     * Gets the longest key length of an object
-     * @param o {object} Object to iterate over
-     * @returns {number}
-     */
-  private static getMaxKeyLen (o: Record<string, any>): number {
-    return Math.max(0, ...Object.keys(o).map(x => x.length))
-  };
-
-  /**
-     * Gets the maximum length of the member of any members of an array.
-     * @param ary Array to iterate over.
-     * @returns
-     */
-  private static getMaxMemLen (ary: string[]): number {
-    return Math.max(0, ...ary.map(x => x.length))
-  };
-
-  /**
      * Checks if a character is a decimal digit.
      * @param ch Character to check
      * @returns
@@ -260,56 +242,7 @@ export class PreJsPy {
     )
   };
 
-  /**
-     * Copies a dictionary for use in other functions.
-     *
-     * @template {string|number|symbol} K
-     * @template V
-     *
-     * @param {Record<K, V>} record
-     * @return {Record<K, V>}
-     */
-  private static copyDict<S extends string | number | symbol, T, U extends Record<S, T>>(dict: U): U {
-    return { ...dict }
-  }
-
-  /**
-     * Copies a list.
-     *
-     * @template T
-     *
-     * @param {Array<T>} ary
-     * @return {Array<T>}
-     */
-  private static copyList<T>(ary: T[]): T[] {
-    return ary.slice(0)
-  }
-
-  // ==================
-  // CONFIG
-  // ==================
-
-  /**
-     * Gets the configuration of this parser.
-     * @return {PreJsPy.Config<L,U,B>}
-     */
-  GetConfig (): Config {
-    return {
-      Operators: {
-        Literals: PreJsPy.copyDict(this.config.Operators.Literals),
-        Unary: PreJsPy.copyList(this.config.Operators.Unary),
-        Binary: PreJsPy.copyDict(this.config.Operators.Binary)
-      },
-      Features: {
-        Compound: this.config.Features.Compound,
-        Conditional: this.config.Features.Conditional,
-        Identifiers: this.config.Features.Identifiers,
-        Calls: this.config.Features.Calls,
-        Members: PreJsPy.copyDict(this.config.Features.Members),
-        Literals: PreJsPy.copyDict(this.config.Features.Literals)
-      }
-    }
-  }
+  // #region "Config"
 
   readonly config: Config
   private unaryOperatorLength = 0
@@ -320,60 +253,138 @@ export class PreJsPy {
      */
   SetConfig (config?: PartialConfig): Config {
     if (typeof config === 'object') {
-      if (typeof config.Operators === 'object') {
-        if (config.Operators.Literals != null) {
-          this.config.Operators.Literals = PreJsPy.copyDict(config.Operators.Literals)
-        }
-        if (config.Operators.Unary != null) {
-          this.config.Operators.Unary = PreJsPy.copyList(config.Operators.Unary)
-          this.unaryOperatorLength = PreJsPy.getMaxMemLen(this.config.Operators.Unary)
-        }
-        if (config.Operators.Binary != null) {
-          this.config.Operators.Binary = PreJsPy.copyDict(config.Operators.Binary)
-          this.binaryOperatorLength = PreJsPy.getMaxKeyLen(this.config.Operators.Binary)
-        }
-      }
-      if (typeof config.Features === 'object') {
-        if (typeof config.Features.Compound === 'boolean') {
-          this.config.Features.Compound = config.Features.Compound
-        }
-        if (typeof config.Features.Conditional === 'boolean') {
-          this.config.Features.Conditional = config.Features.Conditional
-        }
-        if (typeof config.Features.Identifiers === 'boolean') {
-          this.config.Features.Identifiers = config.Features.Identifiers
-        }
-        if (typeof config.Features.Calls === 'boolean') {
-          this.config.Features.Calls = config.Features.Calls
-        }
-        if (typeof config.Features.Members === 'object') {
-          if (typeof config.Features.Members.Computed === 'boolean') {
-            this.config.Features.Members.Computed = config.Features.Members.Computed
-          }
-          if (typeof config.Features.Members.Static === 'boolean') {
-            this.config.Features.Members.Static = config.Features.Members.Static
-          }
-        }
+      PreJsPy.assign(this.config, config, 'Operators', 'Literals')
+      PreJsPy.assign(this.config, config, 'Operators', 'Unary')
+      PreJsPy.assign(this.config, config, 'Operators', 'Binary')
 
-        if (typeof config.Features.Literals === 'object') {
-          if (typeof config.Features.Literals.Array === 'boolean') {
-            this.config.Features.Literals.Array = config.Features.Literals.Array
-          }
-          if (typeof config.Features.Literals.Numeric === 'boolean') {
-            this.config.Features.Literals.Numeric = config.Features.Literals.Numeric
-          }
-          if (typeof config.Features.Literals.NumericSeparator === 'string') {
-            this.config.Features.Literals.NumericSeparator = config.Features.Literals.NumericSeparator
-          }
-          if (typeof config.Features.Literals.String === 'boolean') {
-            this.config.Features.Literals.String = config.Features.Literals.String
-          }
-        }
-      }
+      PreJsPy.assign(this.config, config, 'Features', 'Compound')
+      PreJsPy.assign(this.config, config, 'Features', 'Conditional')
+      PreJsPy.assign(this.config, config, 'Features', 'Identifiers')
+      PreJsPy.assign(this.config, config, 'Features', 'Calls')
+
+      PreJsPy.assign(this.config, config, 'Features', 'Members', 'Computed')
+      PreJsPy.assign(this.config, config, 'Features', 'Members', 'Static')
+
+      PreJsPy.assign(this.config, config, 'Features', 'Literals', 'Array')
+      PreJsPy.assign(this.config, config, 'Features', 'Literals', 'Numeric')
+      PreJsPy.assign(this.config, config, 'Features', 'Literals', 'NumericSeparator')
+      PreJsPy.assign(this.config, config, 'Features', 'Literals', 'String')
+
+      this.unaryOperatorLength = PreJsPy.maxArrayValueLen(this.config.Operators.Unary)
+      this.binaryOperatorLength = PreJsPy.maxObjectKeyLen(this.config.Operators.Binary)
     }
 
     return this.GetConfig()
   }
+
+  /**
+   * Gets the configuration of this parser.
+   * @return {PreJsPy.Config<L,U,B>}
+   */
+  GetConfig (): Config {
+    return PreJsPy.clone(this.config)
+  }
+
+  // the prototype of the {} object (used for cloneing)
+  private static readonly plainObjectPrototype = Object.getPrototypeOf({})
+
+  /**
+   * Clone makes a deep clone of an object.
+   *
+   * @param obj
+   * @returns
+   */
+  private static clone<T>(obj: T): T {
+    // use structuredClone when available
+    if (typeof structuredClone === 'function') {
+      return structuredClone(obj)
+    }
+
+    // simple polyfill
+
+    // an array
+    if (Array.isArray(obj)) {
+      return obj.map(obj => this.clone(obj)) as T
+    }
+
+    // an associative object
+    if (obj !== null && typeof obj === 'object' && Object.getPrototypeOf(obj) === this.plainObjectPrototype) {
+      return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, this.clone(v)])) as T
+    }
+
+    // return object as-is
+    return obj
+  }
+
+  /**
+   * Assigns a specific nested property from source to dest.
+   * The value is cloned.
+   *
+   * This is roughly equivalent to
+   *
+   * dest[path[0]]...[path[n]] = this.clone(source[path[0]]...[path[n]])
+   *
+   * with appropriate existence checks.
+   *
+   * @param dest the destination element to assign into
+   * @param source the source object to assign from
+   * @param path the names of properties to navigate through
+   */
+  private static assign (dest: any, source: any, ...path: string[]): void {
+    // skip if we have no arguments
+    if (path.length === 0) {
+      return
+    }
+
+    // find the source as dest properties
+    let destProp = dest
+    let sourceProp = source
+
+    // iterate through to the penultimate elements
+    for (const element of path.slice(0, path.length - 1)) {
+      if (!Object.prototype.hasOwnProperty.call(destProp, element)) {
+        return
+      }
+      if (!Object.prototype.hasOwnProperty.call(sourceProp, element)) {
+        return
+      }
+
+      destProp = destProp[element]
+      sourceProp = sourceProp[element]
+    }
+
+    // check the last element
+    const element = path[path.length - 1]
+    if (!Object.prototype.hasOwnProperty.call(destProp, element)) {
+      return
+    }
+    if (!Object.prototype.hasOwnProperty.call(sourceProp, element)) {
+      return
+    }
+
+    // and assign the clone
+    destProp[element] = this.clone(sourceProp[element])
+  }
+
+  /**
+     * Gets the longest key length of an object
+     * @param o {object} Object to iterate over
+     * @returns {number}
+     */
+  private static maxObjectKeyLen (o: Record<string, any>): number {
+    return Math.max(0, ...Object.keys(o).map(x => x.length))
+  };
+
+  /**
+     * Gets the maximum length of the member of an array.
+     * @param ary Array to iterate over.
+     * @returns
+     */
+  private static maxArrayValueLen (ary: string[]): number {
+    return Math.max(0, ...ary.map(x => x.length))
+  };
+
+  // #endregion
 
   // =========
   // INIT CODE
@@ -847,7 +858,7 @@ export class PreJsPy {
           str += '\\'
           break
 
-          // default: just add the character literally.
+        // default: just add the character literally.
         default:
           str += ch
       }
