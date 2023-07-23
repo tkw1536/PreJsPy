@@ -76,7 +76,7 @@ class PreJsPy
      */
     private function throw_error(string $message): never
     {
-        throw new ParsingError($message, $this->expr, $this->index);
+        throw new ParsingError($message, implode('', $this->expr), $this->index);
     }
 
     // =======================
@@ -126,7 +126,7 @@ class PreJsPy
      */
     private static function isDecimalDigit(string $ch): bool
     {
-        return 1 === mb_strlen($ch, 'UTF-8') && $ch >= '0' && $ch <= '9';
+        return $ch >= '0' && $ch <= '9';
     }
 
     /**
@@ -136,7 +136,7 @@ class PreJsPy
      */
     private static function isIdentifierStart(string $ch): bool
     {
-        return 1 === mb_strlen($ch, 'UTF-8') && (
+        return (
             ('$' === $ch)
             || ('_' === $ch)
             || ($ch >= 'a' && $ch <= 'z')
@@ -152,7 +152,7 @@ class PreJsPy
      */
     private static function isIdentifierPart(string $ch): bool
     {
-        return 1 === mb_strlen($ch, 'UTF-8') && (
+        return (
             ('$' === $ch)
             || ('_' === $ch)
             || ($ch >= 'a' && $ch <= 'z')
@@ -282,14 +282,15 @@ class PreJsPy
 
     private int $index = 0;
     private int $length = 0;
-    private string $expr = '';
+    /** @var string[] */
+    private array $expr = [];
 
     /**
      * Returns the current character or "" if the end of the string was reached.
      */
     private function char(): string
     {
-        return mb_substr($this->expr, $this->index, 1, 'UTF-8');
+        return $this->expr[$this->index] ?? '';
     }
 
     /**
@@ -297,7 +298,7 @@ class PreJsPy
      */
     private function chars(int $count): string
     {
-        return mb_substr($this->expr, $this->index, $count, 'UTF-8');
+        return implode('', array_slice($this->expr, $this->index, $count));
     }
 
     /**
@@ -305,7 +306,7 @@ class PreJsPy
      */
     private function charsFrom(int $start): string
     {
-        return mb_substr($this->expr, $start, $this->index - $start, 'UTF-8');
+        return implode('', array_slice($this->expr, $start, $this->index - $start));
     }
 
     /**
@@ -317,14 +318,14 @@ class PreJsPy
     {
         try {
             $this->index = 0;
-            $this->expr = $expr;
-            $this->length = mb_strlen($expr, 'UTF-8');
+            $this->expr = mb_str_split($expr, 1, 'UTF-8');
+            $this->length = count($this->expr);
 
             return $this->gobbleCompound();
         } finally {
             // to avoid leaks of the state
             $this->index = 0;
-            $this->expr = '';
+            $this->expr = [];
             $this->length = 0;
         }
     }
