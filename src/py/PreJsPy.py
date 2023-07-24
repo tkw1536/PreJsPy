@@ -379,7 +379,7 @@ class PreJsPy(object):
 
     # endregion
 
-    #region "State"
+    # region "State"
 
     __index: int = 0
     __length: int = 0
