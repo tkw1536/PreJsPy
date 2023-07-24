@@ -30,6 +30,6 @@ php:
 phpdeps:
 	cd src/php && composer install
 phpcheck:
-	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --format=txt --dry-run --diff
+	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --format=txt --dry-run --verbose --diff
 phpformat:
 	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes

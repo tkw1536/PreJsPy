@@ -126,7 +126,7 @@ class PreJsPy
         ;
     }
 
-    // region "Config"
+    #region "Config"
 
     private array $config;
     private int $unaryOperatorLength;
@@ -280,9 +280,9 @@ class PreJsPy
         return $len;
     }
 
-    // endregion
+    #endregion
 
-    // region "State"
+    #region "State"
 
     private int $index = 0;
     private int $length = 0;
@@ -325,7 +325,7 @@ class PreJsPy
         return implode('', array_slice($this->expr, $start, $this->index - $start));
     }
 
-    // endregion
+    #endregion
 
     /**
      * Parses an expression into a parse tree.

@@ -17,6 +17,8 @@ return $config->setRules([
         'comment_to_phpdoc' => [],
         'declare_strict_types' => true,
         'no_superfluous_elseif' => true,
+        'single_line_comment_style' => ['comment_types' => ['asterisk']],
+        'single_line_comment_spacing' => false,
         'psr_autoloading' => false,
         'strict_comparison' => true,
     ])
