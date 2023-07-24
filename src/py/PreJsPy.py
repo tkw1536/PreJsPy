@@ -274,15 +274,17 @@ class PreJsPy(object):
             or (ord(ch) >= 128)  # non-ascii
         )
 
-    # =======
-    # CONFIG
-    # =======
-
     # region "Config"
 
     __config: "Config"
     __unaryOperatorLength: int
     __binaryOperatorLength: int
+
+    def __init__(self) -> None:
+        """Creates a new PreJsPy instance."""
+
+        self.__config = self.__class__.GetDefaultConfig()
+        self.SetConfig(cast("PartialConfig", self.__config))
 
     def SetConfig(self, config: Optional["PartialConfig"]) -> "Config":
         """Sets the config used by this parser.
@@ -377,23 +379,17 @@ class PreJsPy(object):
 
     # endregion
 
-    # =========
-    # INIT CODE
-    # =========
-
-    def __init__(self) -> None:
-        """Creates a new PreJSPyParser instance."""
-
-        self.__config = self.__class__.GetDefaultConfig()
-        self.SetConfig(cast("PartialConfig", self.__config))
-
-    # =======
-    # PARSING
-    # =======
+    #region "State"
 
     __index: int = 0
     __length: int = 0
     __expr: str = ""
+
+    def __reset(self, expr: str) -> str:
+        """Resets internals state to be able to parse expression"""
+        self.__expr = expr
+        self.__length = len(expr)
+        self.__index = 0
 
     def __char(self) -> str:
         """the current character or "" if the end of the string was reached"""
@@ -407,23 +403,22 @@ class PreJsPy(object):
         """Returns the string of characters starting at start up to (but not including) the current character"""
         return self.__expr[start : self.__index]
 
+    # endregion
+
     def Parse(self, expr: str) -> "Expression":
         """Parses an expression expr into a parse tree.
 
         :param expr: Expression to parse.
         """
 
-        try:
-            self.__index = 0
-            self.__expr = expr
-            self.__length = len(expr)
+        # setup the state properly
+        self.__reset(expr)
 
+        try:
             return self.__gobbleCompound()
         finally:
-            # to avoid leaks of the state
-            self.__index = 0
-            self.__expr = ""
-            self.__length = 0
+            # don't keep the last parsed expression in memory
+            self.__reset("")
 
     def TryParse(
         self, expr: str

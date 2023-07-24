@@ -249,6 +249,14 @@ export class PreJsPy {
   private binaryOperatorLength = 0
 
   /**
+   * Creates a new PreJsPy Object.
+   */
+  constructor () {
+    this.config = PreJsPy.GetDefaultConfig()
+    this.SetConfig(this.config)
+  }
+
+  /**
      * Set the configuration of this parser.
      */
   SetConfig (config?: PartialConfig): Config {
@@ -386,21 +394,20 @@ export class PreJsPy {
 
   // #endregion
 
-  // =========
-  // INIT CODE
-  // =========
-  constructor () {
-    this.config = PreJsPy.GetDefaultConfig()
-    this.SetConfig(this.config)
-  }
-
-  // =======
-  // Parsing
-  // =======
+  // #region "State"
 
   private index: number = 0
   private length: number = 0
   private expr: string = ''
+
+  /**
+   * Resets internal state to be able to parse expression
+   */
+  private reset (expr: string): void {
+    this.expr = expr
+    this.length = expr.length
+    this.index = 0
+  }
 
   /**
    * @returns the current character or "" if the end of the string was reached
@@ -425,22 +432,20 @@ export class PreJsPy {
     return this.expr.substring(start, this.index)
   }
 
+  // #endregion
+
   /**
      * Parses a source string into a parse tree
      */
   Parse (expr: string): Expression {
     // setup the state properly
-    this.index = 0
-    this.expr = expr
-    this.length = expr.length
+    this.reset(expr)
 
     try {
       return this.gobbleCompound()
     } finally {
-      // revert state, to avoid any leaks of the expression that has been parsed
-      this.index = 0
-      this.expr = ''
-      this.length = 0
+      // don't keep the last parsed expression in memory
+      this.reset('')
     }
   }
 

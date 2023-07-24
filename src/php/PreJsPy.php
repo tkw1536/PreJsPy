@@ -133,6 +133,15 @@ class PreJsPy
     private int $binaryOperatorLength;
 
     /**
+     * Creates a new PreJsPy instance.
+     */
+    public function __construct()
+    {
+        $this->config = self::GetDefaultConfig();
+        $this->SetConfig($this->config);
+    }
+
+    /**
      * Sets the config used by this parser.
      *
      * @param array|null $config (Possibly partial) configuration to use
@@ -221,7 +230,11 @@ class PreJsPy
         $destProp[$element] = self::clone($sourceProp[$element]);
     }
 
-    /** clone makes a deep clone of an object, recursing into arrays */
+    /**
+     * Clone makes a deep clone of an array-like object.
+     * Unlike the clone builtin, it recurses into array values.
+     * Non-arrays are not cloned, and returned as-is.
+     */
     private function clone(mixed $obj): mixed
     {
         if (is_array($obj)) {
@@ -269,27 +282,24 @@ class PreJsPy
 
     // endregion
 
-    // =========
-    // INIT CODE
-    // =========
-
-    /**
-     * Creates a new PreJsPy instance.
-     */
-    public function __construct()
-    {
-        $this->config = self::GetDefaultConfig();
-        $this->SetConfig($this->config);
-    }
-
-    // =======
-    // PARSING
-    // =======
+    // region "State"
 
     private int $index = 0;
     private int $length = 0;
     /** @var string[] */
     private array $expr = [];
+
+    /**
+     * Resets internal state to be able to parse expression.
+     *
+     * @return void
+     */
+    private function reset(string $expr)
+    {
+        $this->index = 0;
+        $this->expr = mb_str_split($expr, 1, 'UTF-8');
+        $this->length = count($this->expr);
+    }
 
     /**
      * Returns the current character or "" if the end of the string was reached.
@@ -315,6 +325,8 @@ class PreJsPy
         return implode('', array_slice($this->expr, $start, $this->index - $start));
     }
 
+    // endregion
+
     /**
      * Parses an expression into a parse tree.
      *
@@ -322,17 +334,14 @@ class PreJsPy
      */
     public function Parse(string $expr): array
     {
-        try {
-            $this->index = 0;
-            $this->expr = mb_str_split($expr, 1, 'UTF-8');
-            $this->length = count($this->expr);
+        // setup the state properly
+        $this->reset($expr);
 
+        try {
             return $this->gobbleCompound();
         } finally {
-            // to avoid leaks of the state
-            $this->index = 0;
-            $this->expr = [];
-            $this->length = 0;
+            // don't keep the last parsed expression in memory
+            $this->reset('');
         }
     }
 
