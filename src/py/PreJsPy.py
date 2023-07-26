@@ -225,13 +225,13 @@ class PreJsPy(object):
     # =======================
     # STATIC HELPER FUNCTIONS
     # =======================
-    def __throw_error(self, error: str) -> NoReturn:
-        """Throws a parser error with a given message and a given index.
+    def __error(self, error: str) -> ParsingError:
+        """Creates a parser error with a given message and a given index.
 
         :param error: Message of error to throw.
         :param index: Character index at which the error should be thrown.
         """
-        raise ParsingError(error, self.__expr, self.__index)
+        return ParsingError(error, self.__expr, self.__index)
 
     @staticmethod
     def __isDecimalDigit(ch: str) -> bool:
@@ -385,7 +385,7 @@ class PreJsPy(object):
     __length: int = 0
     __expr: str = ""
 
-    def __reset(self, expr: str) -> str:
+    def __reset(self, expr: str) -> None:
         """Resets internals state to be able to parse expression"""
         self.__expr = expr
         self.__length = len(expr)
@@ -407,29 +407,41 @@ class PreJsPy(object):
 
     def Parse(self, expr: str) -> "Expression":
         """Parses an expression expr into a parse tree.
+        If an error occurs, raises a ParsingError.
 
         :param expr: Expression to parse.
         """
 
-        # setup the state properly
-        self.__reset(expr)
-
-        try:
-            return self.__gobbleCompound()
-        finally:
-            # don't keep the last parsed expression in memory
-            self.__reset("")
+        result = self.__gobble(expr)
+        if isinstance(result, ParsingError):
+            raise result
+        return result
 
     def TryParse(
         self, expr: str
     ) -> "Union[Tuple[Expression, None],Tuple[None, ParsingError]]":
-        try:
-            result = self.Parse(expr)
-            return result, None
-        except ParsingError as pe:
-            return None, pe
+        """Parses an expression expr into a parse tree.
+        If successfull, returns (result, None).
+        If an error occurs, returns (None, error).
 
-    def __gobbleCompound(self) -> "Expression":
+        :param expr: Expression to parse.
+        """
+
+        result = self.__gobble(expr)
+        if isinstance(result, ParsingError):
+            return None, result
+        return result, None
+
+    def __gobble(self, expr: str) -> Union["Expression", ParsingError]:
+        """Gobbles the given source string"""
+
+        self.__reset(expr)  # setup the state properly
+        result = self.__gobbleCompound()
+        self.__reset("")  # don't keep the last parsed expression in memory
+
+        return result
+
+    def __gobbleCompound(self) -> Union["Expression", ParsingError]:
         """Gobbles a single or compound expression"""
         nodes = []
 
@@ -443,6 +455,8 @@ class PreJsPy(object):
 
             # Try to gobble each expression individually
             node = self.__gobbleExpression()
+            if isinstance(node, ParsingError):
+                return node
             if node is None:
                 break
 
@@ -450,7 +464,7 @@ class PreJsPy(object):
 
         # didn't find an expression => something went wrong
         if self.__index < self.__length:
-            self.__throw_error("Unexpected " + json.dumps(self.__char()))
+            return self.__error("Unexpected " + json.dumps(self.__char()))
 
         # If there is only one expression, return it as is
         if len(nodes) == 1:
@@ -458,7 +472,7 @@ class PreJsPy(object):
 
         # do not allow compound expressions if they are not enabled
         if not self.__config["Features"]["Compound"]:
-            self.__throw_error("Unexpected compound expression")
+            return self.__error("Unexpected compound expression")
 
         return {"type": ExpressionType.COMPOUND, "body": nodes}
 
@@ -474,14 +488,18 @@ class PreJsPy(object):
                 return ch
             self.__index += 1
 
-    def __gobbleExpression(self) -> Optional["Expression"]:
+    def __gobbleExpression(self) -> Optional["Expression"] | ParsingError:
         """Main parsing function to parse any kind of expression"""
 
         # gobble a binary expression
         test = self.__gobbleBinaryExpression()
 
         # only continue if there is a chance of finding a conditional
-        if (not self.__config["Features"]["Conditional"]) or test is None:
+        if (
+            (not self.__config["Features"]["Conditional"])
+            or test is None
+            or isinstance(test, ParsingError)
+        ):
             return test
 
         # not a conditional expression => return immediately
@@ -492,19 +510,23 @@ class PreJsPy(object):
         #  Ternary conditional: test ? consequent : alternate
         self.__index += 1
         consequent = self.__gobbleExpression()
+        if isinstance(consequent, ParsingError):
+            return consequent
         if consequent is None:
-            self.__throw_error("Expected expression")
+            return self.__error("Expected expression")
 
         # need a ':' for the second part of the alternate
         ch = self.__skipSpaces()
         if ch != PreJsPy.__CHAR_COLON:
-            self.__throw_error("Expected " + json.dumps(PreJsPy.__CHAR_COLON))
+            return self.__error("Expected " + json.dumps(PreJsPy.__CHAR_COLON))
 
         self.__index += 1
         alternate = self.__gobbleExpression()
+        if isinstance(alternate, ParsingError):
+            return alternate
 
         if alternate is None:
-            self.__throw_error("Expected expression")
+            return self.__error("Expected expression")
 
         return {
             "type": ExpressionType.CONDITIONAL_EXP,
@@ -530,10 +552,10 @@ class PreJsPy(object):
 
     # This function is responsible for gobbling an individual expression,
     # e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
-    def __gobbleBinaryExpression(self) -> Optional["Expression"]:
+    def __gobbleBinaryExpression(self) -> Optional["Expression"] | ParsingError:
         # get the leftmost token of a binary expression or bail out
         left = self.__gobbleToken()
-        if left is None:
+        if left is None or isinstance(left, ParsingError):
             return left
 
         exprs = [left]  # a list of expressions
@@ -566,8 +588,10 @@ class PreJsPy(object):
 
             # gobble the next token in the tree
             node = self.__gobbleToken()
+            if isinstance(node, ParsingError):
+                return node
             if node is None:
-                self.__throw_error("Expected expression after " + json.dumps(value))
+                return self.__error("Expected expression after " + json.dumps(value))
             exprs.append(node)
 
             # and store the info about the operator
@@ -590,7 +614,7 @@ class PreJsPy(object):
 
     # An individual part of a binary expression:
     # e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
-    def __gobbleToken(self) -> Optional["Expression"]:
+    def __gobbleToken(self) -> Optional["Expression"] | ParsingError:
         ch = self.__skipSpaces()
 
         # numeric literals
@@ -618,8 +642,10 @@ class PreJsPy(object):
             if to_check in self.__config["Operators"]["Unary"]:
                 self.__index += tc_len
                 argument = self.__gobbleToken()
+                if isinstance(argument, ParsingError):
+                    return argument
                 if argument is None:
-                    self.__throw_error("Expected argument for unary expression")
+                    return self.__error("Expected argument for unary expression")
 
                 return {
                     "type": ExpressionType.UNARY_EXP,
@@ -660,7 +686,7 @@ class PreJsPy(object):
 
     # Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
     # keep track of everything in the numeric literal and then calling `parseFloat` on that string
-    def __gobbleNumericLiteral(self) -> "NumericLiteral":
+    def __gobbleNumericLiteral(self) -> Union["NumericLiteral", ParsingError]:
         start = self.__index
 
         # gobble the number itself
@@ -688,14 +714,16 @@ class PreJsPy(object):
             exponent = self.__gobbleDecimal()
             if exponent == "":
                 ch = self.__char()
-                self.__throw_error("Expected exponent after " + json.dumps(number + ch))
+                return self.__error(
+                    "Expected exponent after " + json.dumps(number + ch)
+                )
 
             number += exponent
 
         ch = self.__char()
         # Check to make sure this isn't a variable name that start with a number (123abc)
         if PreJsPy.__isIdentifierStart(ch):
-            self.__throw_error(
+            return self.__error(
                 "Variable names cannot start with a number like "
                 + json.dumps(number + ch),
             )
@@ -714,7 +742,7 @@ class PreJsPy(object):
 
     # Parses a string literal, staring with single or double quotes with basic support for escape codes
     # e.g. `"hello world"`, `'this is\nJSEP'`
-    def __gobbleStringLiteral(self, quote: str) -> "StringLiteral":
+    def __gobbleStringLiteral(self, quote: str) -> Union["StringLiteral", ParsingError]:
         s = ""
 
         start = self.__index
@@ -757,7 +785,7 @@ class PreJsPy(object):
                 s += ch
 
         if not closed:
-            self.__throw_error("Unclosed quote after " + json.dumps(s))
+            return self.__error("Unclosed quote after " + json.dumps(s))
 
         return {
             "type": ExpressionType.LITERAL,
@@ -770,13 +798,13 @@ class PreJsPy(object):
     # e.g.: `foo`, `_value`, `$x1`
     # Also, this function checks if that identifier is a literal:
     # (e.g. `true`, `false`, `null`)
-    def __gobbleIdentifier(self, ch: str) -> "Union[Literal, Identifier]":
+    def __gobbleIdentifier(self, ch: str) -> "Union[Literal, Identifier, ParsingError]":
         # can't gobble an identifier if the first character isn't the start of one.
         if ch == "":
-            self.__throw_error("Expected literal")
+            return self.__error("Expected literal")
 
         if not PreJsPy.__isIdentifierStart(ch):
-            self.__throw_error("Unexpected " + json.dumps(ch))
+            return self.__error("Unexpected " + json.dumps(ch))
 
         # record where the identifier starts
         start = self.__index
@@ -801,7 +829,7 @@ class PreJsPy(object):
 
         # if identifiers are disabled, we can bail out
         if not self.__config["Features"]["Identifiers"]:
-            self.__throw_error('Unknown literal "' + identifier + '"')
+            return self.__error('Unknown literal "' + identifier + '"')
 
         # found the identifier
         return {"type": ExpressionType.IDENTIFIER, "name": identifier}
@@ -811,7 +839,9 @@ class PreJsPy(object):
     # `(` or `[` has already been gobbled, and gobbles expressions and commas
     # until the terminator character `)` or `]` is encountered.
     # e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
-    def __gobbleArguments(self, start: str, end: str) -> List["Expression"]:
+    def __gobbleArguments(
+        self, start: str, end: str
+    ) -> List["Expression"] | ParsingError:
         args = []  # type: List[Expression]
 
         closed = False  # is the expression closed?
@@ -828,7 +858,7 @@ class PreJsPy(object):
             # between expressions
             if ch == PreJsPy.__CHAR_COMMA:
                 if hadComma:
-                    self.__throw_error("Duplicate " + json.dumps(PreJsPy.__CHAR_COMMA))
+                    return self.__error("Duplicate " + json.dumps(PreJsPy.__CHAR_COMMA))
                 hadComma = True
                 self.__index += 1
                 continue
@@ -836,20 +866,24 @@ class PreJsPy(object):
             wantsComma = len(args) > 0
             if wantsComma != hadComma:
                 if wantsComma:
-                    self.__throw_error("Expected " + json.dumps(PreJsPy.__CHAR_COMMA))
+                    return self.__error("Expected " + json.dumps(PreJsPy.__CHAR_COMMA))
                 else:
-                    self.__throw_error("Unexpected " + json.dumps(PreJsPy.__CHAR_COMMA))
+                    return self.__error(
+                        "Unexpected " + json.dumps(PreJsPy.__CHAR_COMMA)
+                    )
 
             node = self.__gobbleExpression()
+            if isinstance(node, ParsingError):
+                return node
 
             if (node is None) or node["type"] == ExpressionType.COMPOUND:
-                self.__throw_error("Expected " + json.dumps(PreJsPy.__CHAR_COMMA))
+                return self.__error("Expected " + json.dumps(PreJsPy.__CHAR_COMMA))
 
             args.append(node)
             hadComma = False
 
         if not closed:
-            self.__throw_error("Unclosed " + json.dumps(start))
+            return self.__error("Unclosed " + json.dumps(start))
 
         return args
 
@@ -859,13 +893,15 @@ class PreJsPy(object):
     # e.g. `Math.acos(obj.angle)`
     #
     # ch is the current character.
-    def __gobbleVariable(self, ch: str) -> Optional["Expression"]:
+    def __gobbleVariable(self, ch: str) -> Optional["Expression"] | ParsingError:
         # parse a group or identifier first
         if ch == PreJsPy.__CHAR_OPEN_PARENTHESES:
             node = self.__gobbleGroup()
         else:
             node = self.__gobbleIdentifier(ch)
 
+        if isinstance(node, ParsingError):
+            return node
         if node is None:
             return None
 
@@ -882,11 +918,15 @@ class PreJsPy(object):
             ):
                 ch = self.__skipSpaces()
 
+                id = self.__gobbleIdentifier(ch)
+                if isinstance(id, ParsingError):
+                    return id
+
                 node = {
                     "type": ExpressionType.MEMBER_EXP,
                     "computed": False,
                     "object": node,
-                    "property": self.__gobbleIdentifier(ch),
+                    "property": id,
                 }
                 continue
 
@@ -896,8 +936,11 @@ class PreJsPy(object):
                 and ch == PreJsPy.__CHAR_OPEN_BRACKET
             ):
                 prop = self.__gobbleExpression()
+                if isinstance(prop, ParsingError):
+                    return prop
+
                 if prop is None:
-                    self.__throw_error("Expected expression")
+                    return self.__error("Expected expression")
 
                 node = {
                     "type": ExpressionType.MEMBER_EXP,
@@ -908,7 +951,7 @@ class PreJsPy(object):
 
                 ch = self.__skipSpaces()
                 if ch != PreJsPy.__CHAR_CLOSE_BRACKET:
-                    self.__throw_error(
+                    return self.__error(
                         "Unclosed " + json.dumps(PreJsPy.__CHAR_OPEN_BRACKET)
                     )
 
@@ -921,12 +964,15 @@ class PreJsPy(object):
                 self.__config["Features"]["Calls"]
                 and ch == PreJsPy.__CHAR_OPEN_PARENTHESES
             ):
+                args = self.__gobbleArguments(
+                    PreJsPy.__CHAR_OPEN_PARENTHESES,
+                    PreJsPy.__CHAR_CLOSE_PARENTHESES,
+                )
+                if isinstance(args, ParsingError):
+                    return args
                 node = {
                     "type": ExpressionType.CALL_EXP,
-                    "arguments": self.__gobbleArguments(
-                        PreJsPy.__CHAR_OPEN_PARENTHESES,
-                        PreJsPy.__CHAR_CLOSE_PARENTHESES,
-                    ),
+                    "arguments": args,
                     "callee": node,
                 }
                 continue
@@ -942,13 +988,16 @@ class PreJsPy(object):
     # and then tries to gobble everything within that parenthesis, assuming
     # that the next thing it should see is the close parenthesis. If not,
     # then the expression probably doesn't have a `)`
-    def __gobbleGroup(self) -> Optional["Expression"]:
+    def __gobbleGroup(self) -> Optional["Expression"] | ParsingError:
         self.__index += 1
+
         node = self.__gobbleExpression()
+        if isinstance(node, ParsingError):
+            return node
 
         ch = self.__skipSpaces()
         if ch != PreJsPy.__CHAR_CLOSE_PARENTHESES:
-            self.__throw_error(
+            return self.__error(
                 "Unclosed " + json.dumps(PreJsPy.__CHAR_OPEN_PARENTHESES)
             )
 
@@ -958,14 +1007,17 @@ class PreJsPy(object):
     # Responsible for parsing Array literals `[1, 2, 3]`
     # This function assumes that it needs to gobble the opening bracket
     # and then tries to gobble the expressions as arguments.
-    def __gobbleArray(self) -> "Ary":
+    def __gobbleArray(self) -> Union["Ary", ParsingError]:
         self.__index += 1
+        elements = self.__gobbleArguments(
+            PreJsPy.__CHAR_OPEN_BRACKET, PreJsPy.__CHAR_CLOSE_BRACKET
+        )
+        if isinstance(elements, ParsingError):
+            return elements
 
         return {
             "type": ExpressionType.ARRAY_EXP,
-            "elements": self.__gobbleArguments(
-                PreJsPy.__CHAR_OPEN_BRACKET, PreJsPy.__CHAR_CLOSE_BRACKET
-            ),
+            "elements": elements,
         }
 
     @staticmethod

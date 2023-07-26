@@ -72,11 +72,11 @@ class PreJsPy
     // =======================
 
     /**
-     * Throws a parser error with a given message and a given index.
+     * Creates a parser error with a given message and a given index.
      */
-    private function throw_error(string $message): never
+    private function error(string $message): ParsingError
     {
-        throw new ParsingError($message, implode('', $this->expr), $this->index);
+        return new ParsingError($message, implode('', $this->expr), $this->index);
     }
 
     // =======================
@@ -329,34 +329,50 @@ class PreJsPy
 
     /**
      * Parses an expression into a parse tree.
+     * If an error occurs, raises a ParsingError.
      *
-     * @param string $expr Expression to pare
+     * @param string $expr Expression to parse
      */
     public function Parse(string $expr): array
     {
-        // setup the state properly
-        $this->reset($expr);
-
-        try {
-            return $this->gobbleCompound();
-        } finally {
-            // don't keep the last parsed expression in memory
-            $this->reset('');
+        $result = $this->gobble($expr);
+        if ($result instanceof ParsingError) {
+            throw $result;
         }
+
+        return $result;
     }
 
+    /**
+     * Parses an expression into a parse tree.
+     * If successfull, returns [$result, null].
+     * If an error occurs, returns [null, $error].
+     *
+     * @param string $expr Expression to parse
+     */
     public function TryParse(string $expr): array
     {
-        try {
-            $result = $this->Parse($expr);
-
-            return [$result, null];
-        } catch (ParsingError $pe) {
-            return [null, $pe];
+        $result = $this->gobble($expr);
+        if ($result instanceof ParsingError) {
+            return [null, $result];
         }
+
+        return [$result, null];
     }
 
-    public function gobbleCompound(): array
+    /**
+     * Gobbles the given source string.
+     */
+    private function gobble(string $expr): array|ParsingError
+    {
+        $this->reset($expr); // setup the state properly
+        $result = $this->gobbleCompound();
+        $this->reset(''); // don't keep the last parsed expression in memory
+
+        return $result;
+    }
+
+    public function gobbleCompound(): array|ParsingError
     {
         $nodes = [];
 
@@ -370,6 +386,9 @@ class PreJsPy
 
             // Try to gobble each expression individually
             $node = $this->gobbleExpression();
+            if ($node instanceof ParsingError) {
+                return $node;
+            }
             if (null === $node) {
                 break;
             }
@@ -379,7 +398,7 @@ class PreJsPy
 
         // didn't find an expression => something went wrong
         if ($this->index < $this->length) {
-            $this->throw_error('Unexpected '.json_encode($this->char()));
+            return $this->error('Unexpected '.json_encode($this->char()));
         }
 
         // If there is only one expression, return it as is
@@ -389,7 +408,7 @@ class PreJsPy
 
         // do not allow compound expressions if they are not enabled
         if (!$this->config['Features']['Compound']) {
-            $this->throw_error('Unexpected compound expression');
+            return $this->error('Unexpected compound expression');
         }
 
         return [
@@ -417,13 +436,13 @@ class PreJsPy
     /**
      * Main parsing function to parse any kind of expression.
      */
-    private function gobbleExpression(): array|null
+    private function gobbleExpression(): array|ParsingError|null
     {
         // gobble a binary expression
         $test = $this->gobbleBinaryExpression();
 
         // only continue if there is a chance of finding a conditional
-        if ((!$this->config['Features']['Conditional']) || null === $test) {
+        if ((!$this->config['Features']['Conditional']) || null === $test || $test instanceof ParsingError) {
             return $test;
         }
 
@@ -435,22 +454,29 @@ class PreJsPy
 
         // conditional expression: test ? consequent : alternate
         ++$this->index;
+
         $consequent = $this->gobbleExpression();
+        if ($consequent instanceof ParsingError) {
+            return $consequent;
+        }
         if (null === $consequent) {
-            $this->throw_error('Expected expression');
+            return $this->error('Expected expression');
         }
 
         // need a ':' for the second part of the alternate
         $ch = $this->skipSpaces();
         if (self::CHAR_COLON !== $ch) {
-            $this->throw_error('Expected '.json_encode(self::CHAR_COLON));
+            return $this->error('Expected '.json_encode(self::CHAR_COLON));
         }
 
         ++$this->index;
-        $alternate = $this->gobbleExpression();
 
+        $alternate = $this->gobbleExpression();
+        if ($alternate instanceof ParsingError) {
+            return $alternate;
+        }
         if (null === $alternate) {
-            $this->throw_error('Expected expression');
+            return $this->error('Expected expression');
         }
 
         return [
@@ -489,10 +515,13 @@ class PreJsPy
      * This function is responsible for gobbling an individual expression,
      * e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`.
      */
-    public function gobbleBinaryExpression(): array|null
+    public function gobbleBinaryExpression(): array|ParsingError|null
     {
         // Get the leftmost token of a binary expression or bail out
         $left = $this->gobbleToken();
+        if ($left instanceof ParsingError) {
+            return $left;
+        }
         if (null === $left) {
             return null;
         }
@@ -530,8 +559,11 @@ class PreJsPy
 
             // gobble the next token in the tree
             $node = $this->gobbleToken();
+            if ($node instanceof ParsingError) {
+                return $node;
+            }
             if (null === $node) {
-                $this->throw_error('Expected expression after '.json_encode($value));
+                return $this->error('Expected expression after '.json_encode($value));
             }
             $exprs[] = $node;
 
@@ -560,7 +592,7 @@ class PreJsPy
      * An individual part of a binary expression:
      * e.g. `foo.bar(baz)`, `1`, `'abc'`, `(a % 2)` (because it's in parenthesis).
      */
-    public function gobbleToken(): array|null
+    public function gobbleToken(): array|ParsingError|null
     {
         $ch = $this->skipSpaces();
 
@@ -584,9 +616,14 @@ class PreJsPy
             $to_check = $this->chars($tc_len);
             if (in_array($to_check, $this->config['Operators']['Unary'])) {
                 $this->index += $tc_len;
+
                 $argument = $this->gobbleToken();
+                if ($argument instanceof ParsingError) {
+                    return $argument;
+                }
+
                 if (null === $argument) {
-                    $this->throw_error('Expected argument for unary expression');
+                    return $this->error('Expected argument for unary expression');
                 }
 
                 return [
@@ -642,7 +679,7 @@ class PreJsPy
      * Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
      * keep track of everything in the numeric literal and then calling `parseFloat` on that string.
      */
-    private function gobbleNumericLiteral(): array
+    private function gobbleNumericLiteral(): array|ParsingError
     {
         $start = $this->index;
 
@@ -673,7 +710,7 @@ class PreJsPy
             // exponent itself
             $exponent = $this->gobbleDecimal();
             if ('' === $exponent) {
-                $this->throw_error('Expected exponent after '.json_encode($number.$this->char()));
+                return $this->error('Expected exponent after '.json_encode($number.$this->char()));
             }
 
             $number .= $exponent;
@@ -682,7 +719,7 @@ class PreJsPy
         $ch = $this->char();
         // Check to make sure this isn't a variable name that start with a number (123abc)
         if (self::isIdentifierStart($ch)) {
-            $this->throw_error('Variable names cannot start with a number like '.json_encode($number.$ch));
+            return $this->error('Variable names cannot start with a number like '.json_encode($number.$ch));
         }
 
         // parse the float value and get the literal (if needed)
@@ -706,7 +743,7 @@ class PreJsPy
      *
      * @param string $quote the quote character
      */
-    private function gobbleStringLiteral(string $quote): array
+    private function gobbleStringLiteral(string $quote): array|ParsingError
     {
         $s = '';
 
@@ -754,7 +791,7 @@ class PreJsPy
         }
 
         if (!$closed) {
-            $this->throw_error('Unclosed quote after '.json_encode($s));
+            return $this->error('Unclosed quote after '.json_encode($s));
         }
 
         return [
@@ -771,15 +808,15 @@ class PreJsPy
      * Also, this function checks if that identifier is a literal:
      * (e.g. `true`, `false`, `null`).
      */
-    private function gobbleIdentifier(string $ch): array
+    private function gobbleIdentifier(string $ch): array|ParsingError
     {
         // can't gobble an identifier if the first character isn't the start of one.
         if ('' === $ch) {
-            $this->throw_error('Expected literal');
+            return $this->error('Expected literal');
         }
 
         if (!self::isIdentifierStart($ch)) {
-            $this->throw_error('Unexpected '.json_encode($ch));
+            return $this->error('Unexpected '.json_encode($ch));
         }
 
         // record where the identifier starts
@@ -807,7 +844,7 @@ class PreJsPy
 
         // if identifiers are disabled, we can bail out
         if (!$this->config['Features']['Identifiers']) {
-            $this->throw_error('Unknown literal '.json_encode($identifier));
+            return $this->error('Unknown literal '.json_encode($identifier));
         }
 
         // found the identifier
@@ -824,7 +861,7 @@ class PreJsPy
      * until the terminator character `)` or `]` is encountered.
      * e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`.
      */
-    private function gobbleArguments(string $start, string $end): array
+    private function gobbleArguments(string $start, string $end): array|ParsingError
     {
         $args = [];
 
@@ -843,7 +880,7 @@ class PreJsPy
             // between expressions
             if (self::CHAR_COMMA === $ch) {
                 if ($hadComma) {
-                    $this->throw_error('Duplicate '.json_encode(self::CHAR_COMMA));
+                    return $this->error('Duplicate '.json_encode(self::CHAR_COMMA));
                 }
                 $hadComma = true;
                 ++$this->index;
@@ -854,15 +891,18 @@ class PreJsPy
             $wantsComma = count($args) > 0;
             if ($wantsComma !== $hadComma) {
                 if ($wantsComma) {
-                    $this->throw_error('Expected '.json_encode(self::CHAR_COMMA));
+                    return $this->error('Expected '.json_encode(self::CHAR_COMMA));
                 } else {
-                    $this->throw_error('Unexpected '.json_encode(self::CHAR_COMMA));
+                    return $this->error('Unexpected '.json_encode(self::CHAR_COMMA));
                 }
             }
 
             $node = $this->gobbleExpression();
+            if ($node instanceof ParsingError) {
+                return $node;
+            }
             if ((null === $node) || (ExpressionType::COMPOUND === $node['type'])) {
-                $this->throw_error('Expected '.json_encode(self::CHAR_COMMA));
+                return $this->error('Expected '.json_encode(self::CHAR_COMMA));
             }
 
             $args[] = $node;
@@ -870,7 +910,7 @@ class PreJsPy
         }
 
         if (!$closed) {
-            $this->throw_error('Unclosed '.json_encode($start));
+            return $this->error('Unclosed '.json_encode($start));
         }
 
         return $args;
@@ -884,13 +924,23 @@ class PreJsPy
      *
      * @param string $ch the current character
      */
-    private function gobbleVariable(string $ch): array|null
+    private function gobbleVariable(string $ch): array|ParsingError|null
     {
         // parse a group or identifier first
+        /** @var {ParsingError|null} */
+        $node = null;
         if (self::CHAR_OPEN_PARENTHESES === $ch) {
-            $node = $this->gobbleGroup();
+            $group = $this->gobbleGroup();
+            if ($group instanceof ParsingError) {
+                return $group;
+            }
+            $node = $group;
         } else {
-            $node = $this->gobbleIdentifier($ch);
+            $identifier = $this->gobbleIdentifier($ch);
+            if ($identifier instanceof ParsingError) {
+                return $identifier;
+            }
+            $node = $identifier;
         }
         if (null === $node) {
             return null;
@@ -906,11 +956,16 @@ class PreJsPy
             if ($this->config['Features']['Members']['Static'] && self::CHAR_PERIOD === $ch) {
                 $ch = $this->skipSpaces();
 
+                $property = $this->gobbleIdentifier($ch);
+                if ($property instanceof ParsingError) {
+                    return $property;
+                }
+
                 $node = [
                     'type' => ExpressionType::MEMBER_EXP,
                     'computed' => false,
                     'object' => $node,
-                    'property' => $this->gobbleIdentifier($ch),
+                    'property' => $property,
                 ];
 
                 continue;
@@ -919,8 +974,11 @@ class PreJsPy
             // access via []s
             if ($this->config['Features']['Members']['Computed'] && self::CHAR_OPEN_BRACKET === $ch) {
                 $prop = $this->gobbleExpression();
+                if ($prop instanceof ParsingError) {
+                    return $prop;
+                }
                 if (null === $prop) {
-                    $this->throw_error('Expected expression');
+                    return $this->error('Expected expression');
                 }
 
                 $node = [
@@ -932,7 +990,7 @@ class PreJsPy
 
                 $ch = $this->skipSpaces();
                 if (self::CHAR_CLOSE_BRACKET !== $ch) {
-                    $this->throw_error('Unclosed '.json_encode(self::CHAR_OPEN_BRACKET));
+                    return $this->error('Unclosed '.json_encode(self::CHAR_OPEN_BRACKET));
                 }
 
                 ++$this->index;
@@ -942,9 +1000,13 @@ class PreJsPy
 
             // call via ()s
             if ($this->config['Features']['Calls'] && self::CHAR_OPEN_PARENTHESES === $ch) {
+                $args = $this->gobbleArguments(self::CHAR_OPEN_PARENTHESES, self::CHAR_CLOSE_PARENTHESES);
+                if ($args instanceof ParsingError) {
+                    return $args;
+                }
                 $node = [
                     'type' => ExpressionType::CALL_EXP,
-                    'arguments' => $this->gobbleArguments(self::CHAR_OPEN_PARENTHESES, self::CHAR_CLOSE_PARENTHESES),
+                    'arguments' => $args,
                     'callee' => $node,
                 ];
                 continue;
@@ -965,14 +1027,18 @@ class PreJsPy
      * that the next thing it should see is the close parenthesis. If not,
      * then the expression probably doesn't have a `)`.
      */
-    private function gobbleGroup(): array|null
+    private function gobbleGroup(): array|ParsingError|null
     {
         ++$this->index;
+
         $expr = $this->gobbleExpression();
+        if ($expr instanceof ParsingError) {
+            return $expr;
+        }
 
         $ch = $this->skipSpaces();
         if (self::CHAR_CLOSE_PARENTHESES !== $ch) {
-            $this->throw_error('Unclosed '.json_encode(self::CHAR_OPEN_PARENTHESES));
+            return $this->error('Unclosed '.json_encode(self::CHAR_OPEN_PARENTHESES));
         }
 
         ++$this->index;
@@ -985,13 +1051,18 @@ class PreJsPy
      * This function assumes that it needs to gobble the opening bracket
      * and then tries to gobble the expressions as arguments.
      */
-    private function gobbleArray(): array
+    private function gobbleArray(): array|ParsingError
     {
         ++$this->index;
 
+        $elements = $this->gobbleArguments(self::CHAR_OPEN_BRACKET, self::CHAR_CLOSE_BRACKET);
+        if ($elements instanceof ParsingError) {
+            return $elements;
+        }
+
         return [
             'type' => ExpressionType::ARRAY_EXP,
-            'elements' => $this->gobbleArguments(self::CHAR_OPEN_BRACKET, self::CHAR_CLOSE_BRACKET),
+            'elements' => $elements,
         ];
     }
 

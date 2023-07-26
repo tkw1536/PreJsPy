@@ -195,11 +195,11 @@ export class PreJsPy {
   private static readonly CHAR_TAB = '\t'
 
   /**
-     * Throws a parser error with a given message and a given index.
-     * @param message Message of error to throw.
-     */
-  private throwError (message: string): never {
-    throw new ParsingError(message, this.expr, this.index)
+   * Makes a parsing error with the given message and current index.
+   * @param message Message of error to throw.
+   */
+  private error (message: string): ParsingError {
+    return new ParsingError(message, this.expr, this.index)
   }
 
   /**
@@ -438,36 +438,41 @@ export class PreJsPy {
      * Parses a source string into a parse tree
      */
   Parse (expr: string): Expression {
-    // setup the state properly
-    this.reset(expr)
-
-    try {
-      return this.gobbleCompound()
-    } finally {
-      // don't keep the last parsed expression in memory
-      this.reset('')
+    const result = this.gobble(expr)
+    if (result instanceof ParsingError) {
+      throw result
     }
+    return result
   }
 
   /**
    * Parses a source string into an expression, or returns an error
    */
   TryParse (expr: string): ParsingResult<Expression> {
-    try {
-      const result = this.Parse(expr)
-      return [result, null]
-    } catch (e: any) {
-      if (e instanceof ParsingError) {
-        return [null, e]
-      }
-      throw e
+    const result = this.gobble(expr)
+    if (result instanceof ParsingError) {
+      return [null, result]
     }
+    return [result, null]
+  }
+
+  /**
+   * Gobbles the given source string
+   * @param expr
+   * @returns
+   */
+  private gobble (expr: string): Expression | ParsingError {
+    this.reset(expr) // setup the state properly
+    const result = this.gobbleCompound()
+    this.reset('') // don't keep the last parsed expression in memory
+
+    return result
   }
 
   /**
      * Gobbles a single or compound expression from the input.
      */
-  private gobbleCompound (): Expression {
+  private gobbleCompound (): Expression | ParsingError {
     const nodes: Expression[] = []
 
     while (this.index < this.length) {
@@ -481,6 +486,9 @@ export class PreJsPy {
 
       // Try to gobble each expression individually
       const node = this.gobbleExpression()
+      if (node instanceof ParsingError) {
+        return node
+      }
       if (node === null) {
         break
       }
@@ -492,7 +500,7 @@ export class PreJsPy {
       // If we weren't able to find a binary expression and are out of room, then
       // the expression passed in probably has too much
       const ch = this.char()
-      this.throwError('Unexpected ' + JSON.stringify(ch))
+      return this.error('Unexpected ' + JSON.stringify(ch))
     }
 
     // If there's only one expression just try returning the expression
@@ -502,7 +510,7 @@ export class PreJsPy {
 
     // do not allow compound expressions if they are not enabled
     if (!this.config.Features.Compound) {
-      this.throwError('Unexpected compound expression')
+      return this.error('Unexpected compound expression')
     }
 
     return {
@@ -531,12 +539,12 @@ export class PreJsPy {
      * This code first attempts to check if a conditional expression is provided and, if not the case, delegates to a binary expression.
      * @returns
      */
-  private gobbleExpression (): Expression | null {
+  private gobbleExpression (): Expression | ParsingError | null {
     // gobble the binary expression
     const test = this.gobbleBinaryExpression()
 
     // only continue if there is a chance of finding a conditional
-    if (!this.config.Features.Conditional || test === null) {
+    if (!this.config.Features.Conditional || test === null || test instanceof ParsingError) {
       return test
     }
 
@@ -552,21 +560,27 @@ export class PreJsPy {
     this.index++
 
     const consequent = this.gobbleExpression()
+    if (consequent instanceof ParsingError) {
+      return consequent
+    }
     if (consequent === null) {
-      this.throwError('Expected expression')
+      return this.error('Expected expression')
     }
 
     {
       const ch = this.skipSpaces()
       if (ch !== PreJsPy.CHAR_COLON) {
-        this.throwError('Expected ' + JSON.stringify(PreJsPy.CHAR_COLON))
+        return this.error('Expected ' + JSON.stringify(PreJsPy.CHAR_COLON))
       }
     }
 
     this.index++
     const alternate = this.gobbleExpression()
+    if (alternate instanceof ParsingError) {
+      return alternate
+    }
     if (alternate === null) {
-      this.throwError('Expected expression')
+      return this.error('Expected expression')
     }
 
     return {
@@ -600,9 +614,12 @@ export class PreJsPy {
 
   // This function is responsible for gobbling an individual expression,
   // e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
-  private gobbleBinaryExpression (): Expression | null {
+  private gobbleBinaryExpression (): Expression | ParsingError | null {
     // get the leftmost token of a binary expression or bail out
     const left = this.gobbleToken()
+    if (left instanceof ParsingError) {
+      return left
+    }
     if (left === null) {
       return null
     }
@@ -636,8 +653,11 @@ export class PreJsPy {
       }
 
       const node = this.gobbleToken()
+      if (node instanceof ParsingError) {
+        return node
+      }
       if (node === null) {
-        this.throwError('Expected expression after ' + JSON.stringify(value))
+        return this.error('Expected expression after ' + JSON.stringify(value))
       }
       exprs.push(node)
 
@@ -663,7 +683,7 @@ export class PreJsPy {
 
   // An individual part of a binary expression:
   // e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
-  private gobbleToken (): Expression | null {
+  private gobbleToken (): Expression | ParsingError | null {
     const ch = this.skipSpaces()
 
     // numeric literals
@@ -689,8 +709,11 @@ export class PreJsPy {
         this.index += candidateLength
 
         const argument = this.gobbleToken()
+        if (argument instanceof ParsingError) {
+          return argument
+        }
         if (argument === null) {
-          this.throwError('Expected argument for unary expression')
+          return this.error('Expected argument for unary expression')
         }
 
         return {
@@ -746,7 +769,7 @@ export class PreJsPy {
      * Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
      * keep track of everything in the numeric literal and then calling `parseFloat` on that string
      */
-  private gobbleNumericLiteral (): NumericLiteral {
+  private gobbleNumericLiteral (): NumericLiteral | ParsingError {
     const start = this.index
 
     // gobble the number itself
@@ -779,7 +802,7 @@ export class PreJsPy {
       const exponent = this.gobbleDecimal()
       if (exponent === '') {
         const ch = this.char()
-        this.throwError('Expected exponent after ' + JSON.stringify(number + ch))
+        return this.error('Expected exponent after ' + JSON.stringify(number + ch))
       }
 
       number += exponent
@@ -790,7 +813,7 @@ export class PreJsPy {
     {
       const ch = this.char()
       if (PreJsPy.isIdentifierStart(ch)) {
-        this.throwError('Variable names cannot start with a number like ' + JSON.stringify(number + ch))
+        return this.error('Variable names cannot start with a number like ' + JSON.stringify(number + ch))
       }
     }
 
@@ -812,7 +835,7 @@ export class PreJsPy {
      * Parses a string literal, staring with single or double quotes with basic support for escape codes
      * e.g. `"hello world"`, `'this is\na linebreak'`
      */
-  private gobbleStringLiteral (): StringLiteral {
+  private gobbleStringLiteral (): StringLiteral | ParsingError {
     let str = ''
     const quote = this.char()
     let closed = false
@@ -870,7 +893,7 @@ export class PreJsPy {
     }
 
     if (!closed) {
-      this.throwError('Unclosed quote after ' + JSON.stringify(str))
+      return this.error('Unclosed quote after ' + JSON.stringify(str))
     }
 
     return {
@@ -888,14 +911,14 @@ export class PreJsPy {
      * Also, this function checks if that identifier is a literal:
      * (e.g. `true`, `false`, `null`) or `this`
      */
-  private gobbleIdentifier (ch: string): Literal | Identifier {
+  private gobbleIdentifier (ch: string): Literal | Identifier | ParsingError {
     const start = this.index
 
     if (ch === '') {
-      this.throwError('Expected literal')
+      return this.error('Expected literal')
     }
     if (!PreJsPy.isIdentifierStart(ch)) {
-      this.throwError('Unexpected ' + JSON.stringify(ch))
+      return this.error('Unexpected ' + JSON.stringify(ch))
     }
     this.index++
 
@@ -917,8 +940,9 @@ export class PreJsPy {
     }
 
     if (!this.config.Features.Identifiers) {
-      this.throwError('Unknown literal ' + JSON.stringify(identifier))
+      return this.error('Unknown literal ' + JSON.stringify(identifier))
     }
+
     return {
       type: ExpressionType.IDENTIFIER,
       name: identifier
@@ -933,7 +957,7 @@ export class PreJsPy {
      *
      * e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
      */
-  private gobbleArguments (start: string, end: string): Expression[] {
+  private gobbleArguments (start: string, end: string): Expression[] | ParsingError {
     const args: Expression[] = []
 
     let closed = false // is the expression closed?
@@ -949,7 +973,7 @@ export class PreJsPy {
 
       if (ch === PreJsPy.CHAR_COMMA) { // between expressions
         if (hadComma) {
-          this.throwError('Duplicate ' + JSON.stringify(PreJsPy.CHAR_COMMA))
+          return this.error('Duplicate ' + JSON.stringify(PreJsPy.CHAR_COMMA))
         }
         hadComma = true
         this.index++
@@ -960,22 +984,25 @@ export class PreJsPy {
       const wantsComma = args.length > 0
       if (wantsComma !== hadComma) {
         if (wantsComma) {
-          this.throwError('Expected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
+          return this.error('Expected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
         } else {
-          this.throwError('Unexpected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
+          return this.error('Unexpected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
         }
       }
 
       const node = this.gobbleExpression()
+      if (node instanceof ParsingError) {
+        return node
+      }
       if (node === null || node.type === ExpressionType.COMPOUND) {
-        this.throwError('Expected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
+        return this.error('Expected ' + JSON.stringify(PreJsPy.CHAR_COMMA))
       }
 
       args.push(node)
       hadComma = false
     }
     if (!closed) {
-      this.throwError('Unclosed ' + JSON.stringify(start))
+      return this.error('Unclosed ' + JSON.stringify(start))
     }
     return args
   }
@@ -990,11 +1017,21 @@ export class PreJsPy {
      * It also gobbles function calls:
      * Math.acos(obj.angle)
      */
-  private gobbleVariable (ch: string): Expression | null {
+  private gobbleVariable (ch: string): Expression | ParsingError | null {
     // parse a group or identifier first
-    let node: Expression | null = (ch === PreJsPy.CHAR_OPEN_PARENTHESES) ? this.gobbleGroup() : this.gobbleIdentifier(ch)
-    if (node === null) {
-      return null
+    let node: Expression
+    if (ch === PreJsPy.CHAR_OPEN_PARENTHESES) {
+      const group = this.gobbleGroup()
+      if (group === null || group instanceof ParsingError) {
+        return group
+      }
+      node = group
+    } else {
+      const identifier = this.gobbleIdentifier(ch)
+      if (identifier instanceof ParsingError) {
+        return identifier
+      }
+      node = identifier
     }
 
     // then iterate over operations applied to it
@@ -1006,11 +1043,17 @@ export class PreJsPy {
       // access via .
       if (this.config.Features.Members.Static && ch === PreJsPy.CHAR_PERIOD) {
         const ch = this.skipSpaces()
+
+        const property = this.gobbleIdentifier(ch)
+        if (property instanceof ParsingError) {
+          return property
+        }
+
         node = {
           type: ExpressionType.MEMBER_EXP,
           computed: false,
           object: node,
-          property: this.gobbleIdentifier(ch)
+          property
         }
         continue
       }
@@ -1019,7 +1062,10 @@ export class PreJsPy {
       if (this.config.Features.Members.Computed && ch === PreJsPy.CHAR_OPEN_BRACKET) {
         const property = this.gobbleExpression()
         if (property === null) {
-          this.throwError('Expected Expression')
+          return this.error('Expected Expression')
+        }
+        if (property instanceof ParsingError) {
+          return property
         }
 
         node = {
@@ -1031,7 +1077,7 @@ export class PreJsPy {
 
         const ch = this.skipSpaces()
         if (ch !== PreJsPy.CHAR_CLOSE_BRACKET) {
-          this.throwError('Unclosed ' + JSON.stringify(PreJsPy.CHAR_OPEN_BRACKET))
+          return this.error('Unclosed ' + JSON.stringify(PreJsPy.CHAR_OPEN_BRACKET))
         }
         this.index++
         continue
@@ -1039,9 +1085,13 @@ export class PreJsPy {
 
       // call with ()s
       if (this.config.Features.Calls && ch === PreJsPy.CHAR_OPEN_PARENTHESES) {
+        const args = this.gobbleArguments(PreJsPy.CHAR_OPEN_PARENTHESES, PreJsPy.CHAR_CLOSE_PARENTHESES)
+        if (args instanceof ParsingError) {
+          return args
+        }
         node = {
           type: ExpressionType.CALL_EXP,
-          arguments: this.gobbleArguments(PreJsPy.CHAR_OPEN_PARENTHESES, PreJsPy.CHAR_CLOSE_PARENTHESES),
+          arguments: args,
           callee: node
         }
         continue
@@ -1061,14 +1111,17 @@ export class PreJsPy {
      * that the next thing it should see is the close parenthesis. If not,
      * then the expression probably doesn't have a `)`
      */
-  private gobbleGroup (): Expression | null {
+  private gobbleGroup (): Expression | ParsingError | null {
     this.index++
 
     const node = this.gobbleExpression()
+    if (node instanceof ParsingError) {
+      return node
+    }
 
     const ch = this.skipSpaces()
     if (ch !== PreJsPy.CHAR_CLOSE_PARENTHESES) {
-      this.throwError('Unclosed ' + JSON.stringify(PreJsPy.CHAR_OPEN_PARENTHESES))
+      return this.error('Unclosed ' + JSON.stringify(PreJsPy.CHAR_OPEN_PARENTHESES))
     }
 
     this.index++
@@ -1080,12 +1133,17 @@ export class PreJsPy {
      * This function assumes that it needs to gobble the opening bracket
      * and then tries to gobble the expressions as arguments.
      */
-  private gobbleArray (): Ary {
+  private gobbleArray (): Ary | ParsingError {
     this.index++
+
+    const elements = this.gobbleArguments(PreJsPy.CHAR_OPEN_BRACKET, PreJsPy.CHAR_CLOSE_BRACKET)
+    if (elements instanceof ParsingError) {
+      return elements
+    }
 
     return {
       type: ExpressionType.ARRAY_EXP,
-      elements: this.gobbleArguments(PreJsPy.CHAR_OPEN_BRACKET, PreJsPy.CHAR_CLOSE_BRACKET)
+      elements
     }
   }
 
