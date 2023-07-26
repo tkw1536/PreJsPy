@@ -18,7 +18,6 @@ from typing import (
     Optional,
     cast,
     TypedDict,
-    NoReturn,
 )
 
 from enum import Enum
@@ -419,7 +418,7 @@ class PreJsPy(object):
 
     def TryParse(
         self, expr: str
-    ) -> "Union[Tuple[Expression, None],Tuple[None, ParsingError]]":
+    ) -> "Tuple[Expression, None]|Tuple[None, ParsingError]":
         """Parses an expression expr into a parse tree.
         If successfull, returns (result, None).
         If an error occurs, returns (None, error).
@@ -432,7 +431,7 @@ class PreJsPy(object):
             return None, result
         return result, None
 
-    def __gobble(self, expr: str) -> Union["Expression", ParsingError]:
+    def __gobble(self, expr: str) -> "Expression|ParsingError":
         """Gobbles the given source string"""
 
         self.__reset(expr)  # setup the state properly
@@ -441,7 +440,7 @@ class PreJsPy(object):
 
         return result
 
-    def __gobbleCompound(self) -> Union["Expression", ParsingError]:
+    def __gobbleCompound(self) -> "Expression|ParsingError":
         """Gobbles a single or compound expression"""
         nodes = []
 
@@ -488,7 +487,7 @@ class PreJsPy(object):
                 return ch
             self.__index += 1
 
-    def __gobbleExpression(self) -> Optional["Expression"] | ParsingError:
+    def __gobbleExpression(self) -> "Optional[Expression]|ParsingError":
         """Main parsing function to parse any kind of expression"""
 
         # gobble a binary expression
@@ -539,7 +538,7 @@ class PreJsPy(object):
     # Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
     # and move down from 3 to 2 to 1 character until a matching binary operation is found
     # then, return that binary operation
-    def __gobbleBinaryOp(self) -> Optional[str]:
+    def __gobbleBinaryOp(self) -> "Optional[str]":
         self.__skipSpaces()
         tc_len = self.__binaryOperatorLength
         while tc_len > 0:
@@ -552,7 +551,7 @@ class PreJsPy(object):
 
     # This function is responsible for gobbling an individual expression,
     # e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
-    def __gobbleBinaryExpression(self) -> Optional["Expression"] | ParsingError:
+    def __gobbleBinaryExpression(self) -> "Optional[Expression]|ParsingError":
         # get the leftmost token of a binary expression or bail out
         left = self.__gobbleToken()
         if left is None or isinstance(left, ParsingError):
@@ -614,7 +613,7 @@ class PreJsPy(object):
 
     # An individual part of a binary expression:
     # e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
-    def __gobbleToken(self) -> Optional["Expression"] | ParsingError:
+    def __gobbleToken(self) -> "Optional[Expression]|ParsingError":
         ch = self.__skipSpaces()
 
         # numeric literals
@@ -686,7 +685,7 @@ class PreJsPy(object):
 
     # Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
     # keep track of everything in the numeric literal and then calling `parseFloat` on that string
-    def __gobbleNumericLiteral(self) -> Union["NumericLiteral", ParsingError]:
+    def __gobbleNumericLiteral(self) -> "NumericLiteral|ParsingError":
         start = self.__index
 
         # gobble the number itself
@@ -742,7 +741,7 @@ class PreJsPy(object):
 
     # Parses a string literal, staring with single or double quotes with basic support for escape codes
     # e.g. `"hello world"`, `'this is\nJSEP'`
-    def __gobbleStringLiteral(self, quote: str) -> Union["StringLiteral", ParsingError]:
+    def __gobbleStringLiteral(self, quote: str) -> "StringLiteral|ParsingError":
         s = ""
 
         start = self.__index
@@ -798,7 +797,7 @@ class PreJsPy(object):
     # e.g.: `foo`, `_value`, `$x1`
     # Also, this function checks if that identifier is a literal:
     # (e.g. `true`, `false`, `null`)
-    def __gobbleIdentifier(self, ch: str) -> "Union[Literal, Identifier, ParsingError]":
+    def __gobbleIdentifier(self, ch: str) -> "Literal|Identifier|ParsingError":
         # can't gobble an identifier if the first character isn't the start of one.
         if ch == "":
             return self.__error("Expected literal")
@@ -841,7 +840,7 @@ class PreJsPy(object):
     # e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
     def __gobbleArguments(
         self, start: str, end: str
-    ) -> List["Expression"] | ParsingError:
+    ) -> "List[Expression]|ParsingError":
         args = []  # type: List[Expression]
 
         closed = False  # is the expression closed?
@@ -893,7 +892,7 @@ class PreJsPy(object):
     # e.g. `Math.acos(obj.angle)`
     #
     # ch is the current character.
-    def __gobbleVariable(self, ch: str) -> Optional["Expression"] | ParsingError:
+    def __gobbleVariable(self, ch: str) -> "Optional[Expression]|ParsingError":
         # parse a group or identifier first
         if ch == PreJsPy.__CHAR_OPEN_PARENTHESES:
             node = self.__gobbleGroup()
@@ -988,7 +987,7 @@ class PreJsPy(object):
     # and then tries to gobble everything within that parenthesis, assuming
     # that the next thing it should see is the close parenthesis. If not,
     # then the expression probably doesn't have a `)`
-    def __gobbleGroup(self) -> Optional["Expression"] | ParsingError:
+    def __gobbleGroup(self) -> "Optional[Expression]|ParsingError":
         self.__index += 1
 
         node = self.__gobbleExpression()
