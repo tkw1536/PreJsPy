@@ -19,9 +19,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
-        run: make tsdeps
+        run: make @ts/deps
       - name: Run Tests
-        run:  make typescript
+        run:  make @ts/test
   check:
     name: 'Check Format & Types'
 
@@ -34,6 +34,8 @@ jobs:
         with:
           node-version: 19.x
       - name: Install dependencies
-        run: make tsdeps
-      - name: Check Formatting & Types
-        run: make tscheck
+        run: make @ts/deps
+      - name: Lint
+        run: make @ts/lint
+      - name: Typecheck
+        run: make @ts/types

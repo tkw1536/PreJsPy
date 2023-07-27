@@ -18,8 +18,10 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
+      - name: Install dependencies
+        run: make @php/deps
       - name: Run Tests
-        run:  make php
+        run:  make @php/test
   check:
     name: 'Check Format & Types'
 
@@ -32,6 +34,8 @@ jobs:
       with:
         php-version: 8.1
     - name: Install dependencies
-      run: make phpdeps
-    - name: Check & Lint PHP
-      run: make phpcheck
+      run: make @php/deps
+    - name: Lint
+      run: make @php/lint
+    - name: Typecheck
+      run: make @php/types

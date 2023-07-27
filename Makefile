@@ -1,35 +1,75 @@
-.PHONY: all check format python pycheck pydeps pyformat typescript tsdeps php phpcheck pyformat phpdeps phpformat
+# ------------------------------ #
+# All of the supported languages #
+# ------------------------------ #
+LANGS = py ts php
 
-all: python typescript php
-check: pycheck tscheck phpcheck
-format: pyformat tsformat phpformat
+# run tests
+all: test
 
+# @lang/deps install dependencies for all testing code
+DEPS = $(patsubst %, @%/deps, $(LANGS))
+deps: $(DEPS)
 
-python:
-	cd src/py/ && python test.py
-pydeps:
+# @lang/test runs all of the tests
+TEST = $(patsubst %, @%/test, $(LANGS))
+test: $(TEST)
+
+# @lang/format formats the source files
+FORMAT = $(patsubst %, @%/format, $(LANGS))
+format: $(FORMAT)
+
+# @lang/lint is like format, but only checks if formatting is needed
+LINT = $(patsubst %, @%/lint, $(LANGS))
+lint: $(LINT)
+
+# @lang/types runs type checking for the given language
+TYPES = $(patsubst %, @%/types, $(LANGS))
+types: $(TYPES)
+
+# **all** targets are phony (don't tell anyone)
+.PHONY: all deps $(DEPS) test $(TEST) format $(FORMAT) lint $(LINT) types $(TYPES)
+
+# ------------------------------ #
+# Python                         #
+# ------------------------------ #
+
+@py/deps:
 	python3 -m pip install mypy black
-pycheck:
-	cd src/py && python3 -m black --check PreJsPy.py test.py
-	cd src/py && python3 -m mypy --strict PreJsPy.py
-pyformat:
+@py/test:
+	cd src/py/ && python test.py
+@py/format:
 	cd src/py && python3 -m black PreJsPy.py test.py
+@py/lint:
+	cd src/py && python3 -m black --check PreJsPy.py test.py
+@py/types:
+	cd src/py && python3 -m mypy --strict PreJsPy.py
 
-typescript:
-	cd src/ts/ && yarn ts-node test
-tsdeps:
-	cd src/ts/ && yarn install --frozen-lockfile
-tscheck:
-	cd src/ts && yarn ts-standard PreJsPy.ts test.ts
-	cd src/ts && yarn tsc --noEmit PreJsPy.ts
-tsformat:
+# ------------------------------ #
+# TypeScript                     #
+# ------------------------------ #
+
+@ts/deps:
+	cd src/ts && yarn install --frozen-lockfile
+@ts/test:
+	cd src/ts && yarn ts-node test
+@ts/format:
 	cd src/ts && yarn ts-standard --fix PreJsPy.ts test.ts
+@ts/lint:
+	cd src/ts && yarn ts-standard PreJsPy.ts test.ts
+@ts/types:
+	cd src/ts && yarn tsc --noEmit PreJsPy.ts
 
-php:
-	cd src/php && php test.php
-phpdeps:
+# ------------------------------ #
+# PHP                            #
+# ------------------------------ #
+
+@php/deps:
 	cd src/php && composer install
-phpcheck:
-	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --format=txt --dry-run --verbose --diff
-phpformat:
+@php/test:
+	cd src/php && php test.php
+@php/format:
 	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes
+@php/lint:
+	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --format=txt --dry-run --verbose --diff
+@php/types:
+	echo "Not implemented"

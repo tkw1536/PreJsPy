@@ -19,8 +19,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - name: Run tests
-        run: make python
+      - name: Install dependencies
+        run: make @py/deps
+      - name: Run Tests
+        run:  make @py/test
   check:
     name: 'Check Format & Types'
 
@@ -34,6 +36,8 @@ jobs:
         python-version: 3.11
         architecture: x64
     - name: Install dependencies
-      run: make pydeps
-    - name: Check & Lint Python
-      run: make pycheck
+      run: make @py/deps
+    - name: Lint
+      run: make @py/lint
+    - name: Typecheck
+      run: make @py/types
