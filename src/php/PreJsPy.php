@@ -25,6 +25,185 @@ enum ExpressionType: string
     case ARRAY_EXP = 'ArrayExpression';
 }
 
+abstract class Expression implements JsonSerializable
+{
+    public readonly ExpressionType $type;
+
+    public function __construct(ExpressionType $type)
+    {
+        $this->type = $type;
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        // get the properties of this object
+        $reflect = new ReflectionClass($this);
+        $props = $reflect->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_READONLY);
+
+        $result = [];
+        foreach ($props as $prop) {
+            if (!$prop->isReadOnly() || !$prop->isPublic()) {
+                continue;
+            }
+            $name = $prop->getName();
+            // @phpstan-ignore-next-line variable.dynamicName
+            $result[$name] = $this->$name;
+        }
+
+        return $result;
+    }
+}
+
+class Compound extends Expression
+{
+    /** @var array<Expression> */
+    public readonly array $body;
+
+    /**
+     * @param array<Expression> $body
+     */
+    public function __construct(array $body)
+    {
+        parent::__construct(ExpressionType::COMPOUND);
+        $this->body = $body;
+    }
+}
+
+class Identifier extends Expression
+{
+    public readonly string $name;
+
+    public function __construct(string $name)
+    {
+        parent::__construct(ExpressionType::IDENTIFIER);
+        $this->name = $name;
+    }
+}
+
+class Member extends Expression
+{
+    public readonly bool $computed;
+    public readonly Expression $object;
+    public readonly Expression $property;
+
+    public function __construct(Expression $object, Expression $property, bool $computed)
+    {
+        parent::__construct(ExpressionType::MEMBER_EXP);
+        $this->object = $object;
+        $this->property = $property;
+        $this->computed = $computed;
+    }
+}
+
+class Literal extends Expression
+{
+    public readonly mixed $value;
+    public readonly string $raw;
+
+    public function __construct(mixed $value, string $raw)
+    {
+        parent::__construct(ExpressionType::LITERAL);
+        $this->value = $value;
+        $this->raw = $raw;
+    }
+}
+
+enum LiteralKind: string
+{
+    case String = 'string';
+    case Number = 'number';
+}
+
+class SpecialLiteral extends Expression
+{
+    public readonly LiteralKind $kind;
+    public readonly float|string $value;
+    public readonly string $raw;
+
+    public function __construct(float|string $value, string $raw)
+    {
+        parent::__construct(ExpressionType::LITERAL);
+        $this->kind = is_string($value) ? LiteralKind::String : LiteralKind::Number;
+        $this->value = $value;
+        $this->raw = $raw;
+    }
+}
+
+class Call extends Expression
+{
+    /** @var array<Expression> */
+    public readonly array $arguments;
+    public readonly Expression $callee;
+
+    /**
+     * @param array<Expression> $arguments
+     */
+    public function __construct(Expression $callee, array $arguments)
+    {
+        parent::__construct(ExpressionType::CALL_EXP);
+        $this->callee = $callee;
+        $this->arguments = $arguments;
+    }
+}
+
+class Unary extends Expression
+{
+    public readonly string $operator;
+    public readonly Expression $argument;
+
+    public function __construct(string $operator, Expression $argument)
+    {
+        parent::__construct(ExpressionType::UNARY_EXP);
+        $this->operator = $operator;
+        $this->argument = $argument;
+    }
+}
+
+class Binary extends Expression
+{
+    public readonly string $operator;
+    public readonly Expression $left;
+    public readonly Expression $right;
+
+    public function __construct(string $operator, Expression $left, Expression $right)
+    {
+        parent::__construct(ExpressionType::BINARY_EXP);
+        $this->operator = $operator;
+        $this->left = $left;
+        $this->right = $right;
+    }
+}
+
+class Condition extends Expression
+{
+    public readonly Expression $test;
+    public readonly Expression $consequent;
+    public readonly Expression $alternate;
+
+    public function __construct(Expression $test, Expression $consequent, Expression $alternate)
+    {
+        parent::__construct(ExpressionType::CONDITIONAL_EXP);
+        $this->test = $test;
+        $this->consequent = $consequent;
+        $this->alternate = $alternate;
+    }
+}
+
+class Ary extends Expression
+{
+    /** @var array<Expression> */
+    public readonly array $elements;
+
+    /**
+     * @param array<Expression> $elements
+     */
+    public function __construct(array $elements)
+    {
+        parent::__construct(ExpressionType::ARRAY_EXP);
+        $this->elements = $elements;
+    }
+}
+
 class ParsingError extends Exception
 {
     public readonly string $error;
@@ -50,6 +229,9 @@ class ParsingError extends Exception
 
 /**
  * Represents a single instance of the PreJsPy parser.
+ *
+ * @phpstan-type Config array{"Operators":array{"Literals":array<string,mixed>,"Unary":array<string>,"Binary":array<string,int>},"Features":array{"Compound":bool,"Conditional":bool,"Identifiers":bool,"Calls":bool,"Members":array{"Static":bool,"Computed":bool},"Literals":array{"Numeric":bool,"NumericSeparator":string,"String":bool,"Array":bool}}}
+ * @phpstan-type PartialConfig array{"Operators"?:array{"Literals"?:array<string,mixed>,"Unary"?:array<string>,"Binary"?:array<string,int>},"Features"?:array{"Compound"?:bool,"Conditional"?:bool,"Identifiers"?:bool,"Calls"?:bool,"Members"?:array{"Static"?:bool,"Computed"?:bool},"Literals"?:array{"Numeric"?:bool,"NumericSeparator"?:string,"String"?:bool,"Array"?:bool}}}
  */
 class PreJsPy
 {
@@ -128,6 +310,7 @@ class PreJsPy
 
     #region "Config"
 
+    /** @var Config */
     private array $config;
     private int $unaryOperatorLength;
     private int $binaryOperatorLength;
@@ -144,9 +327,9 @@ class PreJsPy
     /**
      * Sets the config used by this parser.
      *
-     * @param array|null $config (Possibly partial) configuration to use
+     * @param PartialConfig|null $config (Possibly partial) configuration to use
      *
-     * @return void
+     * @return Config
      */
     public function SetConfig(array|null $config): array
     {
@@ -174,6 +357,8 @@ class PreJsPy
 
     /**
      * Gets the current config used by this parser.
+     *
+     * @return Config
      */
     public function GetConfig(): array
     {
@@ -190,9 +375,9 @@ class PreJsPy
      *
      * with appropriate existence checks.
      *
-     * @param {array} dest the destination element to assign into
-     * @param {array} source the source object to assign from
-     * @param {string} path the names of properties to navigate through
+     * @param array<mixed> $dest   dest the destination element to assign into
+     * @param array<mixed> $source source the source object to assign from
+     * @param string       $path   path the names of properties to navigate through
      */
     private function assign(array &$dest, array &$source, string ...$path): void
     {
@@ -234,11 +419,20 @@ class PreJsPy
      * Clone makes a deep clone of an array-like object.
      * Unlike the clone builtin, it recurses into array values.
      * Non-arrays are not cloned, and returned as-is.
+     *
+     * @template T array
+     *
+     * @param T $obj Object to clone
+     *
+     * @return T
      */
     private function clone(mixed $obj): mixed
     {
         if (is_array($obj)) {
-            return array_map(fn ($x) => $this->clone($x), $obj);
+            /** @var T */
+            $clone = array_map(fn ($x) => $this->clone($x), $obj);
+
+            return $clone;
         }
 
         return $obj;
@@ -247,7 +441,7 @@ class PreJsPy
     /**
      * Gets the longest key length of an object.
      *
-     * @param array $o object to iterate over
+     * @param array<string,mixed> $o object to iterate over
      */
     private static function maxObjectKeyLen(array $o): int
     {
@@ -265,7 +459,7 @@ class PreJsPy
     /**
      * Gets the maximum length of the member of an array.
      *
-     * @param array $ary array to iterate over
+     * @param array<string> $ary array to iterate over
      */
     private static function maxArrayValueLen(array $ary): int
     {
@@ -333,7 +527,7 @@ class PreJsPy
      *
      * @param string $expr Expression to parse
      */
-    public function Parse(string $expr): array
+    public function Parse(string $expr): Expression
     {
         $result = $this->gobble($expr);
         if ($result instanceof ParsingError) {
@@ -349,6 +543,8 @@ class PreJsPy
      * If an error occurs, returns [null, $error].
      *
      * @param string $expr Expression to parse
+     *
+     * @return array{0:Expression,1:null}|array{0:null,1:ParsingError}
      */
     public function TryParse(string $expr): array
     {
@@ -363,7 +559,7 @@ class PreJsPy
     /**
      * Gobbles the given source string.
      */
-    private function gobble(string $expr): array|ParsingError
+    private function gobble(string $expr): Expression|ParsingError
     {
         $this->reset($expr); // setup the state properly
         $result = $this->gobbleCompound();
@@ -372,8 +568,9 @@ class PreJsPy
         return $result;
     }
 
-    public function gobbleCompound(): array|ParsingError
+    public function gobbleCompound(): Expression|ParsingError
     {
+        /** @var array<Expression> */
         $nodes = [];
 
         while ($this->index < $this->length) {
@@ -411,10 +608,7 @@ class PreJsPy
             return $this->error('Unexpected compound expression');
         }
 
-        return [
-            'type' => ExpressionType::COMPOUND,
-            'body' => $nodes,
-        ];
+        return new Compound($nodes);
     }
 
     /**
@@ -436,7 +630,7 @@ class PreJsPy
     /**
      * Main parsing function to parse any kind of expression.
      */
-    private function gobbleExpression(): array|ParsingError|null
+    private function gobbleExpression(): Expression|ParsingError|null
     {
         // gobble a binary expression
         $test = $this->gobbleBinaryExpression();
@@ -448,7 +642,7 @@ class PreJsPy
 
         // not a conditional expression => return immediately
         $ch = $this->skipSpaces();
-        if (self::CHAR_QUESTIONMARK !== $ch || null === $test) {
+        if (self::CHAR_QUESTIONMARK !== $ch) {
             return $test;
         }
 
@@ -479,12 +673,7 @@ class PreJsPy
             return $this->error('Expected expression');
         }
 
-        return [
-            'type' => ExpressionType::CONDITIONAL_EXP,
-            'test' => $test,
-            'consequent' => $consequent,
-            'alternate' => $alternate,
-        ];
+        return new Condition($test, $consequent, $alternate);
     }
 
     /**
@@ -515,7 +704,7 @@ class PreJsPy
      * This function is responsible for gobbling an individual expression,
      * e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`.
      */
-    public function gobbleBinaryExpression(): array|ParsingError|null
+    public function gobbleBinaryExpression(): Expression|ParsingError|null
     {
         // Get the leftmost token of a binary expression or bail out
         $left = $this->gobbleToken();
@@ -549,12 +738,12 @@ class PreJsPy
                 $left = array_pop($exprs);
                 $op = array_pop($ops);
 
-                $exprs[] = [
-                    'type' => ExpressionType::BINARY_EXP,
-                    'operator' => $op['value'],
-                    'left' => $left,
-                    'right' => $right,
-                ];
+                if (null === $left) {
+                    // precondition guarantees that this will never happen
+                    throw new Error('never reached');
+                }
+
+                $exprs[] = new Binary($op['value'], $left, $right);
             }
 
             // gobble the next token in the tree
@@ -575,12 +764,7 @@ class PreJsPy
         $j = count($ops) - 1;
         $node = $exprs[$i];
         while ($i > 0 && $j >= 0) {
-            $node = [
-                'type' => ExpressionType::BINARY_EXP,
-                'operator' => $ops[$j]['value'],
-                'left' => $exprs[$i - 1],
-                'right' => $node,
-            ];
+            $node = new Binary($ops[$j]['value'], $exprs[$i - 1], $node);
             --$j;
             --$i;
         }
@@ -592,7 +776,7 @@ class PreJsPy
      * An individual part of a binary expression:
      * e.g. `foo.bar(baz)`, `1`, `'abc'`, `(a % 2)` (because it's in parenthesis).
      */
-    public function gobbleToken(): array|ParsingError|null
+    public function gobbleToken(): Expression|ParsingError|null
     {
         $ch = $this->skipSpaces();
 
@@ -614,7 +798,7 @@ class PreJsPy
         $tc_len = $this->unaryOperatorLength;
         while ($tc_len > 0) {
             $to_check = $this->chars($tc_len);
-            if (in_array($to_check, $this->config['Operators']['Unary'])) {
+            if (in_array($to_check, $this->config['Operators']['Unary'], true)) {
                 $this->index += $tc_len;
 
                 $argument = $this->gobbleToken();
@@ -626,11 +810,7 @@ class PreJsPy
                     return $this->error('Expected argument for unary expression');
                 }
 
-                return [
-                    'type' => ExpressionType::UNARY_EXP,
-                    'operator' => $to_check,
-                    'argument' => $argument,
-                ];
+                return new Unary($to_check, $argument);
             }
 
             --$tc_len;
@@ -664,7 +844,7 @@ class PreJsPy
         $number = '';
         while (true) {
             $ch = $this->char();
-            if ($this->isDecimalDigit($ch)) {
+            if (self::isDecimalDigit($ch)) {
                 $number .= $ch;
             } elseif ($ch !== $separator) {
                 break;
@@ -679,7 +859,7 @@ class PreJsPy
      * Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
      * keep track of everything in the numeric literal and then calling `parseFloat` on that string.
      */
-    private function gobbleNumericLiteral(): array|ParsingError
+    private function gobbleNumericLiteral(): SpecialLiteral|ParsingError
     {
         $start = $this->index;
 
@@ -728,12 +908,7 @@ class PreJsPy
             $number = $this->charsFrom($start);
         }
 
-        return [
-            'type' => ExpressionType::LITERAL,
-            'kind' => 'number',
-            'value' => $value,
-            'raw' => $number,
-        ];
+        return new SpecialLiteral($value, $number);
     }
 
     /**
@@ -743,7 +918,7 @@ class PreJsPy
      *
      * @param string $quote the quote character
      */
-    private function gobbleStringLiteral(string $quote): array|ParsingError
+    private function gobbleStringLiteral(string $quote): SpecialLiteral|ParsingError
     {
         $s = '';
 
@@ -794,12 +969,7 @@ class PreJsPy
             return $this->error('Unclosed quote after '.json_encode($s));
         }
 
-        return [
-            'type' => ExpressionType::LITERAL,
-            'kind' => 'string',
-            'value' => $s,
-            'raw' => $this->charsFrom($start),
-        ];
+        return new SpecialLiteral($s, $this->charsFrom($start));
     }
 
     /**
@@ -808,7 +978,7 @@ class PreJsPy
      * Also, this function checks if that identifier is a literal:
      * (e.g. `true`, `false`, `null`).
      */
-    private function gobbleIdentifier(string $ch): array|ParsingError
+    private function gobbleIdentifier(string $ch): Identifier|Literal|ParsingError
     {
         // can't gobble an identifier if the first character isn't the start of one.
         if ('' === $ch) {
@@ -835,11 +1005,7 @@ class PreJsPy
         // if the identifier is a known literal, return it!
         $identifier = $this->charsFrom($start);
         if (array_key_exists($identifier, $this->config['Operators']['Literals'])) {
-            return [
-                'type' => ExpressionType::LITERAL,
-                'value' => $this->config['Operators']['Literals'][$identifier],
-                'raw' => $identifier,
-            ];
+            return new Literal($this->config['Operators']['Literals'][$identifier], $identifier);
         }
 
         // if identifiers are disabled, we can bail out
@@ -848,10 +1014,7 @@ class PreJsPy
         }
 
         // found the identifier
-        return [
-            'type' => ExpressionType::IDENTIFIER,
-            'name' => $identifier,
-        ];
+        return new Identifier($identifier);
     }
 
     /**
@@ -860,9 +1023,12 @@ class PreJsPy
      * `(` or `[` has already been gobbled, and gobbles expressions and commas
      * until the terminator character `)` or `]` is encountered.
      * e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`.
+     *
+     * @return array<Expression>
      */
     private function gobbleArguments(string $start, string $end): array|ParsingError
     {
+        /** @var array<Expression> */
         $args = [];
 
         $closed = false; // is the expression closed?
@@ -901,7 +1067,7 @@ class PreJsPy
             if ($node instanceof ParsingError) {
                 return $node;
             }
-            if ((null === $node) || (ExpressionType::COMPOUND === $node['type'])) {
+            if ((null === $node) || (ExpressionType::COMPOUND === $node->type)) {
                 return $this->error('Expected '.json_encode(self::CHAR_COMMA));
             }
 
@@ -924,10 +1090,10 @@ class PreJsPy
      *
      * @param string $ch the current character
      */
-    private function gobbleVariable(string $ch): array|ParsingError|null
+    private function gobbleVariable(string $ch): Expression|ParsingError|null
     {
         // parse a group or identifier first
-        /** @var {ParsingError|null} */
+        /** @var ParsingError|null */
         $node = null;
         if (self::CHAR_OPEN_PARENTHESES === $ch) {
             $group = $this->gobbleGroup();
@@ -961,12 +1127,7 @@ class PreJsPy
                     return $property;
                 }
 
-                $node = [
-                    'type' => ExpressionType::MEMBER_EXP,
-                    'computed' => false,
-                    'object' => $node,
-                    'property' => $property,
-                ];
+                $node = new Member($node, $property, false);
 
                 continue;
             }
@@ -981,12 +1142,7 @@ class PreJsPy
                     return $this->error('Expected expression');
                 }
 
-                $node = [
-                    'type' => ExpressionType::MEMBER_EXP,
-                    'computed' => true,
-                    'object' => $node,
-                    'property' => $prop,
-                ];
+                $node = new Member($node, $prop, true);
 
                 $ch = $this->skipSpaces();
                 if (self::CHAR_CLOSE_BRACKET !== $ch) {
@@ -1004,11 +1160,7 @@ class PreJsPy
                 if ($args instanceof ParsingError) {
                     return $args;
                 }
-                $node = [
-                    'type' => ExpressionType::CALL_EXP,
-                    'arguments' => $args,
-                    'callee' => $node,
-                ];
+                $node = new Call($node, $args);
                 continue;
             }
 
@@ -1027,7 +1179,7 @@ class PreJsPy
      * that the next thing it should see is the close parenthesis. If not,
      * then the expression probably doesn't have a `)`.
      */
-    private function gobbleGroup(): array|ParsingError|null
+    private function gobbleGroup(): Expression|ParsingError|null
     {
         ++$this->index;
 
@@ -1051,7 +1203,7 @@ class PreJsPy
      * This function assumes that it needs to gobble the opening bracket
      * and then tries to gobble the expressions as arguments.
      */
-    private function gobbleArray(): array|ParsingError
+    private function gobbleArray(): Ary|ParsingError
     {
         ++$this->index;
 
@@ -1060,14 +1212,13 @@ class PreJsPy
             return $elements;
         }
 
-        return [
-            'type' => ExpressionType::ARRAY_EXP,
-            'elements' => $elements,
-        ];
+        return new Ary($elements);
     }
 
     /**
      * Gets the default configuration.
+     *
+     * @return Config
      */
     public static function GetDefaultConfig(): array
     {

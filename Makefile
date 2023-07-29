@@ -72,4 +72,4 @@ types: $(TYPES)
 @php/lint:
 	cd src/php && ./vendor/bin/php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --format=txt --dry-run --verbose --diff
 @php/types:
-	echo "Not implemented"
+	cd src/php && ./vendor/bin/phpstan analyze

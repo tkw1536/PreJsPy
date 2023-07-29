@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 include 'PreJsPy.php';
 
+/**
+ * @phpstan-import-type PartialConfig from PreJsPy
+ *
+ * @phpstan-type TestCase array{config: PartialConfig, input: string, output?: Expression, error?: string, message: string}
+ */
 class TestPreJsPy
 {
     private static string $BASE_PATH;
 
-    public static function init()
+    public static function init(): void
     {
         self::$BASE_PATH = implode('/', [__DIR__, '..', '..', 'tests']);
     }
@@ -20,7 +25,12 @@ class TestPreJsPy
      */
     public static function parseJSONFile(string $filename): mixed
     {
-        return json_decode(file_get_contents(self::$BASE_PATH.'/'.$filename), true);
+        $contents = file_get_contents(self::$BASE_PATH.'/'.$filename);
+        if (false === $contents) {
+            exit('Unable to read file '.$filename);
+        }
+
+        return json_decode($contents, true);
     }
 
     /**
@@ -34,6 +44,7 @@ class TestPreJsPy
         echo 'Running tests from '.$fn.' ';
 
         // Read the test case file
+        /** @var array<TestCase> */
         $tests = self::parseJSONFile($fn);
 
         // Create a new PreJSPy() instance.
@@ -43,16 +54,21 @@ class TestPreJsPy
         $total = (float) 0;
         foreach ($tests as $t) {
             $time = self::runSingleCase($p, $t, $N);
-            $total += $time ?? 0;
+            $total += $time;
         }
-        echo ' OK ('.number_format($total, 10, '.', ',') * 1000 ."ms)\n";
+        echo ' OK ('.number_format($total * 1000, 10, '.', ',')."ms)\n";
 
         return $total;
     }
 
+    /**
+     * @param TestCase $test
+     */
     private static function runSingleCase(PreJsPy $instance, array $test, int $N): float
     {
-        $instance->SetConfig(self::parseJSONFile('_config.json'));
+        /** @var PartialConfig */
+        $config = self::parseJSONFile('_config.json');
+        $instance->SetConfig($config);
         $instance->SetConfig($test['config']);
 
         echo '.';
@@ -100,7 +116,21 @@ class TestPreJsPy
      */
     private static function jsonSerialize(mixed $value): string
     {
-        return json_encode(self::valueNormalize($value));
+        $encoded = json_encode($value);
+        if (false === $encoded) {
+            exit('json_encode failed');
+        }
+
+        // run built-in serialization into an associative array
+        $serialized = json_decode($encoded, true);
+
+        // and re-encode it normalized
+        $result = json_encode(self::valueNormalize($serialized));
+        if (false === $result) {
+            exit('json_encode failed');
+        }
+
+        return $result;
     }
 
     /**
@@ -115,8 +145,8 @@ class TestPreJsPy
             return $value;
         }
 
-        $value = array_map(function (mixed $value) {
-            return self::valueNormalize($value);
+        $value = array_map(function (mixed $v) {
+            return self::valueNormalize($v);
         }, $value);
         ksort($value);
 
