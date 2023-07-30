@@ -114,16 +114,31 @@ enum LiteralKind: string
     case Number = 'number';
 }
 
-class SpecialLiteral extends Expression
+class StringLiteral extends Expression
 {
     public readonly LiteralKind $kind;
-    public readonly float|string $value;
+    public readonly string $value;
     public readonly string $raw;
 
-    public function __construct(float|string $value, string $raw)
+    public function __construct(string $value, string $raw)
     {
         parent::__construct(ExpressionType::LITERAL);
-        $this->kind = is_string($value) ? LiteralKind::String : LiteralKind::Number;
+        $this->kind = LiteralKind::String;
+        $this->value = $value;
+        $this->raw = $raw;
+    }
+}
+
+class NumericLiteral extends Expression
+{
+    public readonly LiteralKind $kind;
+    public readonly float $value;
+    public readonly string $raw;
+
+    public function __construct(float $value, string $raw)
+    {
+        parent::__construct(ExpressionType::LITERAL);
+        $this->kind = LiteralKind::Number;
         $this->value = $value;
         $this->raw = $raw;
     }
@@ -859,7 +874,7 @@ class PreJsPy
      * Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
      * keep track of everything in the numeric literal and then calling `parseFloat` on that string.
      */
-    private function gobbleNumericLiteral(): SpecialLiteral|ParsingError
+    private function gobbleNumericLiteral(): NumericLiteral|ParsingError
     {
         $start = $this->index;
 
@@ -908,7 +923,7 @@ class PreJsPy
             $number = $this->charsFrom($start);
         }
 
-        return new SpecialLiteral($value, $number);
+        return new NumericLiteral($value, $number);
     }
 
     /**
@@ -918,7 +933,7 @@ class PreJsPy
      *
      * @param string $quote the quote character
      */
-    private function gobbleStringLiteral(string $quote): SpecialLiteral|ParsingError
+    private function gobbleStringLiteral(string $quote): StringLiteral|ParsingError
     {
         $s = '';
 
@@ -969,7 +984,7 @@ class PreJsPy
             return $this->error('Unclosed quote after '.json_encode($s));
         }
 
-        return new SpecialLiteral($s, $this->charsFrom($start));
+        return new StringLiteral($s, $this->charsFrom($start));
     }
 
     /**
