@@ -53,9 +53,9 @@ types: $(TYPES)
 @ts/test:
 	cd src/ts && yarn ts-node test
 @ts/format:
-	cd src/ts && yarn ts-standard --fix PreJsPy.ts test.ts
+	cd src/ts && yarn eslint --fix PreJsPy.ts test.ts
 @ts/lint:
-	cd src/ts && yarn ts-standard PreJsPy.ts test.ts
+	cd src/ts && yarn eslint PreJsPy.ts test.ts
 @ts/types:
 	cd src/ts && yarn tsc --noEmit PreJsPy.ts
 

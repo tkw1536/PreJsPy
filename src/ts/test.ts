@@ -129,7 +129,7 @@ console.log('Node Version: ' + process.version)
 console.log('')
 
 const files: string[] = TestPreJsPy.parseJSONFile('_manifest.json')
-files.forEach(file => TestPreJsPy.testFile(file, 10_000))
+files.forEach(file => { TestPreJsPy.testFile(file, 10_000) })
 
 console.log('')
 console.log('Done.')

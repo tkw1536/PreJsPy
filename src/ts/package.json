@@ -23,8 +23,15 @@
   "homepage": "https://github.com/tkw1536/PreJsPy",
   "devDependencies": {
     "@types/node": "^20.4.1",
+    "@typescript-eslint/eslint-plugin": "^5.52.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "eslint": "^8.47.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-config-standard-with-typescript": "^37.0.0",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-n": "^16.0.0",
+    "eslint-plugin-promise": "^6.0.0",
     "ts-node": "^10.9.1",
-    "ts-standard": "^12.0.2",
     "typescript": "^5.1.6"
   }
 }
