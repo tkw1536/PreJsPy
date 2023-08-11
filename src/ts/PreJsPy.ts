@@ -7,6 +7,8 @@
  * @license MIT
  */
 
+// cSpell:words Wiesing
+
 /**
  * An Expression represents a parsed tree for PreJSPy.
  */
@@ -303,13 +305,6 @@ export class PreJsPy {
    * @returns
    */
   private static clone<T>(obj: T): T {
-    // use structuredClone when available
-    if (typeof structuredClone === 'function') {
-      return structuredClone(obj)
-    }
-
-    // simple polyfill
-
     // an array
     if (Array.isArray(obj)) {
       return obj.map(obj => this.clone(obj)) as T
@@ -362,7 +357,7 @@ export class PreJsPy {
     }
 
     // check the last element
-    const element = path[path.length - 1]
+    const element = path[path.length - 1]! // eslint-disable-line @typescript-eslint/no-non-null-assertion
     if (!Object.prototype.hasOwnProperty.call(destProp, element)) {
       return
     }
@@ -505,7 +500,7 @@ export class PreJsPy {
 
     // If there's only one expression just try returning the expression
     if (nodes.length === 1) {
-      return nodes[0]
+      return nodes[0]! // eslint-disable-line @typescript-eslint/no-non-null-assertion
     }
 
     // do not allow compound expressions if they are not enabled
@@ -596,20 +591,19 @@ export class PreJsPy {
      * Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
      * and move down from 3 to 2 to 1 character until a matching binary operation is found
      * then, return that binary operation.
-     *
-     * @returns {string|false}
      */
-  private gobbleBinaryOp (): string | null {
+  private gobbleBinaryOp (): [string, number] {
     this.skipSpaces()
 
     for (let candidateLength = this.binaryOperatorLength; candidateLength > 0; candidateLength--) {
       const candidate = this.chars(candidateLength)
-      if (Object.prototype.hasOwnProperty.call(this.config.Operators.Binary, candidate)) {
+      const precedence = this.config.Operators.Binary[candidate]
+      if (typeof precedence === 'number') {
         this.index += candidateLength
-        return candidate
+        return [candidate, precedence]
       }
     }
-    return null
+    return ['', NaN]
   }
 
   // This function is responsible for gobbling an individual expression,
@@ -629,14 +623,14 @@ export class PreJsPy {
 
     // Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
     while (true) {
-      const value = this.gobbleBinaryOp()
-      if (value === null) {
+      // extract the binary operator
+      const [value, precedence] = this.gobbleBinaryOp()
+      if (value === '') {
         break
       }
 
-      const precedence = this.config.Operators.Binary[value]
-
-      while ((ops.length > 0) && (precedence < ops[ops.length - 1].precedence)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      while ((ops.length > 0) && (precedence < ops[ops.length - 1]!.precedence)) {
         // the code maintains invariance ops.length === exprs.length + 1
         // so the .pop()s are safe because ops.length >= 1 and exprs.length >= 2
 
@@ -667,12 +661,12 @@ export class PreJsPy {
     let i = exprs.length - 1
     let j = ops.length - 1
 
-    let node = exprs[i]
+    let node = exprs[i]! // eslint-disable-line @typescript-eslint/no-non-null-assertion
     while ((i > 0) && (j >= 0)) {
       node = {
         type: ExpressionType.BINARY_EXP,
-        operator: ops[j].value,
-        left: exprs[i - 1],
+        operator: ops[j]!.value, // eslint-disable-line @typescript-eslint/no-non-null-assertion
+        left: exprs[i - 1]!, // eslint-disable-line @typescript-eslint/no-non-null-assertion
         right: node
       }
       j--
